@@ -1,7 +1,5 @@
 // The array of people and their availability
 const people = [
-    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM', 'Wed 1:00 PM', 'Thu 2:00 PM', 'Fri 3:00 PM'] },
-    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 2:00 PM', 'Fri 4:00 PM'] },
     { name: 'Carol', availability: ['Tue 10:00 AM', 'Wed 1:00 PM', 'Fri 11:00 AM', 'Mon 3:00 PM'] },
     { name: 'Dave', availability: ['Mon 11:00 AM', 'Thu 12:00 PM', 'Thu 3:00 PM', 'Tue 2:00 PM'] },
     { name: 'Eve', availability: ['Fri 10:00 AM', 'Fri 2:00 PM', 'Tue 12:00 PM', 'Wed 3:00 PM'] },
