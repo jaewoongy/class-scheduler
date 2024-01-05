@@ -1,9 +1,21 @@
 // The array of people and their availability
 const people = [
-    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM'] },
-    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM'] },
-    // ... other people ...
+    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM', 'Wed 1:00 PM', 'Thu 2:00 PM', 'Fri 3:00 PM'] },
+    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 2:00 PM', 'Fri 4:00 PM'] },
+    { name: 'Carol', availability: ['Tue 10:00 AM', 'Wed 1:00 PM', 'Fri 11:00 AM', 'Mon 3:00 PM'] },
+    { name: 'Dave', availability: ['Mon 11:00 AM', 'Thu 12:00 PM', 'Thu 3:00 PM', 'Tue 2:00 PM'] },
+    { name: 'Eve', availability: ['Fri 10:00 AM', 'Fri 2:00 PM', 'Tue 12:00 PM', 'Wed 3:00 PM'] },
+    { name: 'Frank', availability: ['Mon 10:00 AM', 'Tue 3:00 PM', 'Wed 1:00 PM', 'Thu 10:00 AM'] },
+    { name: 'Grace', availability: ['Tue 11:00 AM', 'Thu 10:00 AM', 'Thu 4:00 PM', 'Mon 2:00 PM'] },
+    { name: 'Heidi', availability: ['Wed 10:00 AM', 'Fri 1:00 PM', 'Fri 3:00 PM', 'Tue 4:00 PM'] },
+    { name: 'Ivan', availability: ['Mon 2:00 PM', 'Tue 4:00 PM', 'Wed 2:00 PM', 'Thu 11:00 AM'] },
+    { name: 'Judy', availability: ['Thu 11:00 AM', 'Fri 12:00 PM', 'Fri 4:00 PM', 'Mon 1:00 PM'] },
+    { name: 'Kyle', availability: ['Mon 9:00 AM', 'Tue 10:00 AM', 'Wed 11:00 AM', 'Thu 12:00 PM'] },
+    { name: 'Liam', availability: ['Tue 1:00 PM', 'Wed 2:00 PM', 'Thu 3:00 PM', 'Fri 4:00 PM'] },
+    { name: 'Mia', availability: ['Mon 10:00 AM', 'Tue 11:00 AM', 'Wed 1:00 PM', 'Thu 2:00 PM'] },
+    { name: 'Noah', availability: ['Tue 3:00 PM', 'Wed 4:00 PM', 'Thu 10:00 AM', 'Fri 11:00 AM'] }
 ];
+
 
 // Function to create and append the schedule table to the container
 function createTable(buildingNumber) {
