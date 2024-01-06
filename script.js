@@ -1,23 +1,25 @@
 // The array of people and their availability
 const people = [
-    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM', 'Wed 1:00 PM', 'Thu 2:00 PM', 'Fri 3:00 PM'] },
-    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 2:00 PM', 'Fri 4:00 PM'] },
-    { name: 'Carol', availability: ['Tue 10:00 AM', 'Wed 1:00 PM', 'Fri 11:00 AM', 'Mon 3:00 PM'] },
-    { name: 'Dave', availability: ['Mon 11:00 AM', 'Thu 12:00 PM', 'Thu 3:00 PM', 'Tue 2:00 PM'] },
-    { name: 'Eve', availability: ['Fri 10:00 AM', 'Fri 2:00 PM', 'Tue 12:00 PM', 'Wed 3:00 PM'] },
-    { name: 'Frank', availability: ['Mon 10:00 AM', 'Tue 3:00 PM', 'Wed 1:00 PM', 'Thu 10:00 AM'] },
-    { name: 'Grace', availability: ['Tue 11:00 AM', 'Thu 10:00 AM', 'Thu 4:00 PM', 'Mon 2:00 PM'] },
-    { name: 'Heidi', availability: ['Wed 10:00 AM', 'Fri 1:00 PM', 'Fri 3:00 PM', 'Tue 4:00 PM'] },
-    { name: 'Ivan', availability: ['Mon 2:00 PM', 'Tue 4:00 PM', 'Wed 2:00 PM', 'Thu 11:00 AM'] },
-    { name: 'Judy', availability: ['Thu 11:00 AM', 'Fri 12:00 PM', 'Fri 4:00 PM', 'Mon 1:00 PM'] },
-    { name: 'Kyle', availability: ['Mon 9:00 AM', 'Tue 10:00 AM', 'Wed 11:00 AM', 'Thu 12:00 PM'] },
-    { name: 'Liam', availability: ['Tue 1:00 PM', 'Wed 2:00 PM', 'Thu 3:00 PM', 'Fri 4:00 PM'] },
-    { name: 'Mia', availability: ['Mon 10:00 AM', 'Tue 11:00 AM', 'Wed 1:00 PM', 'Thu 2:00 PM'] },
-    { name: 'Noah', availability: ['Tue 3:00 PM', 'Wed 4:00 PM', 'Thu 10:00 AM', 'Fri 11:00 AM'] }
+    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM'], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
+    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM'], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
+    // ... other people
 ];
 
+document.addEventListener('DOMContentLoaded', function() {
+    const scheduleContainer = document.getElementById('schedule-container');
+    for (let i = 1; i <= 6; i++) {
+        scheduleContainer.appendChild(createTable(i));
+    }
+    updateLogPanel();
+});
 
-// Function to create and append the schedule table to the container
+window.addEventListener('click', function(event) {
+    if (!event.target.matches('.dropdown-content')) {
+        closeDropdowns();
+    }
+});
+
+
 function createTable(buildingNumber) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const table = document.createElement('table');
@@ -25,35 +27,36 @@ function createTable(buildingNumber) {
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
 
-    // Create header cells
     const timeHeader = document.createElement('th');
     timeHeader.textContent = 'Time/Day';
     headerRow.appendChild(timeHeader);
+
     daysOfWeek.forEach(day => {
         const dayHeader = document.createElement('th');
         dayHeader.textContent = day;
         headerRow.appendChild(dayHeader);
     });
 
-    // Create the time slot rows
     const tbody = table.createTBody();
     for (let hour = 10; hour <= 20; hour++) {
         const row = tbody.insertRow();
         const timeCell = document.createElement('td');
-        timeCell.textContent = `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+        const formattedHour = hour > 12 ? hour - 12 : hour;
+        const amPm = hour >= 12 ? 'PM' : 'AM';
+        timeCell.textContent = `${formattedHour}:00 ${amPm}`;
         row.appendChild(timeCell);
 
-        for (let i = 1; i <= daysOfWeek.length; i++) {
-            const cell = document.createElement('td');
+        for (let i = 0; i < daysOfWeek.length; i++) {
+            const cell = row.insertCell();
+            const timeslot = `${daysOfWeek[i]} ${formattedHour}:00 ${amPm}`;
             cell.textContent = 'Available';
+            cell.dataset.timeslot = timeslot;
             cell.onclick = function(event) {
-                showDropdown(event, `${daysOfWeek[i-1]} ${timeCell.textContent}`);
+                showDropdown(event, timeslot);
             };
-            row.appendChild(cell);
         }
     }
 
-    // Create the container for the building's schedule
     const buildingDiv = document.createElement('div');
     buildingDiv.className = 'building';
     buildingDiv.appendChild(table);
@@ -61,24 +64,33 @@ function createTable(buildingNumber) {
     return buildingDiv;
 }
 
-// Show the dropdown for selecting an available person
 function showDropdown(event, timeslot) {
     closeDropdowns();
 
     const dropdown = document.createElement('div');
     dropdown.className = 'dropdown';
-    dropdown.style.display = 'block';
-    dropdown.style.position = 'absolute';
-    dropdown.style.left = event.pageX + 'px';
-    dropdown.style.top = event.pageY + 'px';
+    dropdown.style.left = `${event.pageX}px`;
+    dropdown.style.top = `${event.pageY}px`;
 
+    // Check if someone is already assigned to this slot and create a "Remove" option
+    if (event.target.dataset.assigned) {
+        const removeOption = document.createElement('div');
+        removeOption.className = 'dropdown-content';
+        removeOption.textContent = `Remove ${event.target.dataset.assigned} (X)`;
+        removeOption.onclick = function() {
+            removeAssignment(event.target, event.target.dataset.assigned, timeslot);
+        };
+        dropdown.appendChild(removeOption);
+    }
+
+    // Populate the rest of the dropdown
     people.forEach(person => {
         if (person.availability.includes(timeslot)) {
             const option = document.createElement('div');
             option.className = 'dropdown-content';
             option.textContent = person.name;
             option.onclick = function() {
-                assignPerson(event.target, person.name);
+                assignPerson(event.target, person.name, timeslot);
                 closeDropdowns();
             };
             dropdown.appendChild(option);
@@ -93,31 +105,84 @@ function showDropdown(event, timeslot) {
     }
 
     document.body.appendChild(dropdown);
+    dropdown.style.display = 'block';
     event.stopPropagation();
-    console.log("Attempting to show dropdown for timeslot: " + timeslot);
-
 }
 
-    
-// Close all open dropdowns
-function closeDropdowns() {
-    const dropdowns = document.querySelectorAll('.dropdown');
-    dropdowns.forEach(dropdown => dropdown.remove());
-}
+function removeAssignment(target, name, timeslot) {
+    // Find the person in the people array
+    const person = people.find(p => p.name === name);
+    if (person) {
+        // Reduce the person's scheduled hours
+        person.scheduledHours--;
 
-// Assign a person to a time slot
-function assignPerson(target, name) {
-    target.textContent = name;
-    console.log("Assigning " + name + " to the timeslot.");
-}
+        // Remove the timeslot from the person's assignedSlots
+        person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
 
-// Add a global event listener to close dropdowns when clicking anywhere on the page
-window.addEventListener('click', closeDropdowns);
+        // Add the timeslot back to the person's availability
+        person.availability.push(timeslot);
 
-// Generate the schedule tables once the DOM content is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const scheduleContainer = document.getElementById('schedule-container');
-    for (let i = 1; i <= 6; i++) {
-        scheduleContainer.appendChild(createTable(i));
+        // Remove the 'filled-timeslot' class to reset the styling
+        target.classList.remove('filled-timeslot');
+
+        // Clear the 'data-assigned' attribute and reset the cell's text content
+        target.removeAttribute('data-assigned');
+        target.textContent = 'Available';
+
+        // Update the log panel to reflect the change
+        updateLogPanel();
     }
-});
+}
+
+function closeDropdowns() {
+    document.querySelectorAll('.dropdown').forEach(dropdown => dropdown.remove());
+}
+
+function assignPerson(target, name, timeslot) {
+    const person = people.find(p => p.name === name);
+    if (person) {
+        // Check if this slot is already assigned to someone else
+        if (target.dataset.assigned && target.dataset.assigned !== name) {
+            // Revert the previously assigned person's hours and availability
+            removeAssignment(target, target.dataset.assigned, timeslot);
+        }
+
+        // If the slot is already assigned to this person, remove the assignment.
+        if (target.dataset.assigned === name) {
+            target.classList.remove('filled-timeslot');
+            target.textContent = 'Available';
+            target.removeAttribute('data-assigned');
+            person.scheduledHours--;
+            person.availability.push(timeslot); // Add back the available time
+            person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
+        } else {
+            // Assign the new person to the slot.
+            if (person.scheduledHours < person.maxHours) {
+                target.classList.add('filled-timeslot');
+                target.textContent = name;
+                target.dataset.assigned = name;
+                person.scheduledHours++;
+                person.assignedSlots.push(timeslot);
+                person.availability = person.availability.filter(availableTime => availableTime !== timeslot);
+            } else {
+                alert(name + " has reached their maximum working hours.");
+            }
+        }
+    }
+
+    updateLogPanel();
+}
+
+function updateLogPanel() {
+    const logPanel = document.getElementById('schedule-info');
+    logPanel.innerHTML = '';
+
+    people.forEach(person => {
+        const remainingHours = person.maxHours - person.scheduledHours;
+        const availability = person.availability.sort().join(', '); // Sort and join the available times
+        const personInfo = document.createElement('div');
+        personInfo.innerHTML = `<strong>${person.name}</strong>: ${person.scheduledHours} hours scheduled, ${remainingHours} hours remaining. Remaining available times: ${availability}`;
+        logPanel.appendChild(personInfo);
+    });
+}
+

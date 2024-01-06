@@ -6,15 +6,6 @@ body {
     overflow: hidden;
 }
 
-#schedule-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 10px;
-    padding: 10px;
-    height: 100vh;
-}
-
 .building {
     background: #fff;
     border: 1px solid #ccc;
@@ -57,3 +48,25 @@ body {
     cursor: pointer;
     background-color: white;
 }
+
+#schedule-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 tables in a row */
+    grid-gap: 10px; /* Adjust the gap to control spacing between tables */
+    margin-bottom: 30px; /* Adds space at the bottom for the schedule-info */
+    /* Other styles */
+}
+
+#schedule-info {
+    margin-top: 20px; /* Ensure there's space between tables and the info panel */
+    background-color: #f8f8f8; /* Light background for visibility */
+    border: 1px solid #ccc; /* Border to distinguish the panel */
+    padding: 10px; /* Padding inside the panel */
+    /* Adjust the height as necessary, or remove it to let the content dictate the size */
+}
+
+.filled-timeslot {
+    background-color: red;
+    color: white; /* Change text color to ensure readability on red background */
+}
+
