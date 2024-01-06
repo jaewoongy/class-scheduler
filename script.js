@@ -10,8 +10,88 @@ document.addEventListener('DOMContentLoaded', function() {
     for (let i = 1; i <= 6; i++) {
         scheduleContainer.appendChild(createTable(i));
     }
-    updateLogPanel();
+    //loadState(); // Load the saved state
+
+    const saveButton = document.getElementById('save-button');
+    const resetButton = document.getElementById('reset-button');
+    //const loadButton = document.getElementById('load-button'); // If you decide to add a load button
+
+    saveButton.addEventListener('click', function() {
+        saveState();
+        alert('Schedule saved!');
+    });
+
+    resetButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset the entire schedule?')) {
+            resetSchedule();
+        }
+    });
+
+    // loadButton.addEventListener('click', function() { // If you decide to add a load button
+    //     loadState();
+    // });
 });
+
+function saveState() {
+    localStorage.setItem('peopleState', JSON.stringify(people));
+    alert('Schedule saved!');
+}
+
+
+function loadState() {
+    const savedPeopleState = localStorage.getItem('peopleState');
+    if (savedPeopleState) {
+        const peopleState = JSON.parse(savedPeopleState);
+        // Update the people array and UI
+        peopleState.forEach(savedPerson => {
+            const person = people.find(p => p.name === savedPerson.name);
+            if (person) {
+                person.scheduledHours = savedPerson.scheduledHours;
+                person.assignedSlots = savedPerson.assignedSlots;
+                person.availability = savedPerson.availability;
+            }
+        });
+        updateAllTables(); // Reflect the loaded state in the UI
+        updateLogPanel();
+    }
+}
+
+
+
+function resetSchedule() {
+    people.forEach(person => {
+        person.scheduledHours = 0;
+        person.assignedSlots = [];
+        // Reset the availability if needed or leave as is if it shouldn't change
+        // person.availability = [...initialAvailability]; // Assuming you have an initial availability stored
+    });
+    resetLocalStorage(); // Clear the saved state in local storage
+    updateAllTables(); // Update the UI to reflect the reset
+    updateLogPanel();
+}
+
+function updateAllTables() {
+    const scheduleTables = document.querySelectorAll('.schedule-table');
+    scheduleTables.forEach(table => {
+        Array.from(table.querySelectorAll('td')).forEach(cell => {
+            if (cell.dataset.timeslot) {
+                cell.textContent = 'Available';
+                cell.classList.remove('filled-timeslot');
+                cell.removeAttribute('data-assigned');
+            }
+        });
+    });
+}
+
+
+function resetLocalStorage() {
+    localStorage.removeItem('scheduleState');
+    // Optionally clear the titles if needed
+    // for (let i = 1; i <= 6; i++) {
+    //     localStorage.removeItem(`tableTitle-${i}`);
+    // }
+}
+
 
 window.addEventListener('click', function(event) {
     if (!event.target.matches('.dropdown-content')) {

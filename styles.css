@@ -76,3 +76,14 @@ body {
     font-weight: bold;
     cursor: text;
 }
+
+#control-panel {
+    text-align: center;
+    margin: 20px 0;
+}
+
+#control-panel button {
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+}
