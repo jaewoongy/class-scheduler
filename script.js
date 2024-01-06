@@ -1,60 +1,83 @@
-// The array of people and their availability
+const initialAvailability = {
+    'Alice': ['Mon 10:00 AM', 'Tue 11:00 AM'],
+    'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM'],
+    // ... other people
+};
+
 const people = [
-    { name: 'Alice', availability: ['Mon 10:00 AM', 'Tue 11:00 AM'], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
-    { name: 'Bob', availability: ['Mon 10:00 AM', 'Wed 12:00 PM'], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
+    { name: 'Alice', availability: [...initialAvailability['Alice']], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
+    { name: 'Bob', availability: [...initialAvailability['Bob']], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
     // ... other people
 ];
 
+
+// Object to track assignments per table
+const tableAssignments = {
+    table1: [],
+    table2: [],
+    table3: [],
+    table4: [],
+    table5: [],
+    table6: []
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const scheduleContainer = document.getElementById('schedule-container');
+    // Ensure that 'schedule-container' exists in your HTML.
+    
     for (let i = 1; i <= 6; i++) {
         scheduleContainer.appendChild(createTable(i));
     }
-    //loadState(); // Load the saved state
+    loadState(); // This function should load the state. Ensure it's not failing.
 
+    // Ensure these buttons exist in your HTML with these exact IDs.
     const saveButton = document.getElementById('save-button');
     const resetButton = document.getElementById('reset-button');
-    //const loadButton = document.getElementById('load-button'); // If you decide to add a load button
-
-    saveButton.addEventListener('click', function() {
+    const loadButton = document.getElementById('load-button');
+    
+    
+    // Add null checks for buttons to avoid errors if they don't exist.
+    saveButton?.addEventListener('click', function() {
         saveState();
         alert('Schedule saved!');
     });
 
-    resetButton.addEventListener('click', function() {
+    resetButton?.addEventListener('click', function() {
         if (confirm('Are you sure you want to reset the entire schedule?')) {
             resetSchedule();
         }
     });
 
-    // loadButton.addEventListener('click', function() { // If you decide to add a load button
-    //     loadState();
-    // });
+    // Uncommented this section; ensure 'load-button' exists if you're using this.
+    loadButton.addEventListener('click', function() {
+        if (confirm('Do you want to load previously saved data?')) {
+            loadState();
+        }
+    });
 });
 
 function saveState() {
-    localStorage.setItem('peopleState', JSON.stringify(people));
-    alert('Schedule saved!');
+    localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
 }
 
 
 function loadState() {
-    const savedPeopleState = localStorage.getItem('peopleState');
-    if (savedPeopleState) {
-        const peopleState = JSON.parse(savedPeopleState);
-        // Update the people array and UI
-        peopleState.forEach(savedPerson => {
-            const person = people.find(p => p.name === savedPerson.name);
-            if (person) {
-                person.scheduledHours = savedPerson.scheduledHours;
-                person.assignedSlots = savedPerson.assignedSlots;
-                person.availability = savedPerson.availability;
-            }
+    const savedAssignments = localStorage.getItem('tableAssignments');
+    console.log('Loading state:', savedAssignments); // Debug log
+
+    if (savedAssignments) {
+        const loadedAssignments = JSON.parse(savedAssignments);
+        Object.keys(loadedAssignments).forEach(tableId => {
+            tableAssignments[tableId] = loadedAssignments[tableId];
+            updateTable(tableId);
         });
-        updateAllTables(); // Reflect the loaded state in the UI
         updateLogPanel();
+    } else {
+        console.log('No saved state to load.'); // Debug log
+        alert('No saved state to load.');
     }
 }
+
 
 
 
@@ -62,26 +85,43 @@ function resetSchedule() {
     people.forEach(person => {
         person.scheduledHours = 0;
         person.assignedSlots = [];
-        // Reset the availability if needed or leave as is if it shouldn't change
-        // person.availability = [...initialAvailability]; // Assuming you have an initial availability stored
+        person.availability = [...initialAvailability[person.name]];
     });
-    resetLocalStorage(); // Clear the saved state in local storage
-    updateAllTables(); // Update the UI to reflect the reset
+    Object.keys(tableAssignments).forEach(tableId => {
+        tableAssignments[tableId] = [];
+        updateTable(tableId);
+    });
     updateLogPanel();
 }
 
-function updateAllTables() {
-    const scheduleTables = document.querySelectorAll('.schedule-table');
-    scheduleTables.forEach(table => {
-        Array.from(table.querySelectorAll('td')).forEach(cell => {
-            if (cell.dataset.timeslot) {
+
+function updateTable(tableId) {
+    const table = document.getElementById(tableId);
+    const assignments = tableAssignments[tableId];
+
+    Array.from(table.querySelectorAll('td')).forEach(cell => {
+        const timeslot = cell.dataset.timeslot;
+        if (timeslot) {
+            const assignedPersonName = assignments.find(assignment => assignment.timeslot === timeslot)?.name;
+            if (assignedPersonName) {
+                cell.textContent = assignedPersonName;
+                cell.classList.add('filled-timeslot');
+                cell.dataset.assigned = assignedPersonName;
+            } else {
                 cell.textContent = 'Available';
                 cell.classList.remove('filled-timeslot');
-                cell.removeAttribute('data-assigned');
+                delete cell.dataset.assigned;
             }
-        });
+        }
     });
 }
+
+
+// Update All Tables Function
+function updateAllTables() {
+    Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
+}
+
 
 
 function resetLocalStorage() {
@@ -106,6 +146,8 @@ function createTable(buildingNumber) {
     table.className = 'schedule-table';
     const thead = table.createTHead();
     const headerRow = thead.insertRow();
+    table.id = 'table' + buildingNumber; // This will create IDs like 'table1', 'table2', etc.
+
 
     const timeHeader = document.createElement('th');
     timeHeader.textContent = 'Time/Day';
@@ -228,10 +270,13 @@ function closeDropdowns() {
 function assignPerson(target, name, timeslot) {
     const person = people.find(p => p.name === name);
     if (person) {
+        // Identify the table ID from the target element's parents
+        const tableId = findTableId(target);
+
         // Check if this slot is already assigned to someone else
         if (target.dataset.assigned && target.dataset.assigned !== name) {
             // Revert the previously assigned person's hours and availability
-            removeAssignment(target, target.dataset.assigned, timeslot);
+            removeAssignment(target, target.dataset.assigned, timeslot, tableId);
         }
 
         // If the slot is already assigned to this person, remove the assignment.
@@ -242,6 +287,8 @@ function assignPerson(target, name, timeslot) {
             person.scheduledHours--;
             person.availability.push(timeslot); // Add back the available time
             person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
+            // Remove from tableAssignments
+            removeFromTableAssignments(name, timeslot, tableId);
         } else {
             // Assign the new person to the slot.
             if (person.scheduledHours < person.maxHours) {
@@ -251,6 +298,8 @@ function assignPerson(target, name, timeslot) {
                 person.scheduledHours++;
                 person.assignedSlots.push(timeslot);
                 person.availability = person.availability.filter(availableTime => availableTime !== timeslot);
+                // Add to tableAssignments
+                addToTableAssignments(name, timeslot, tableId);
             } else {
                 alert(name + " has reached their maximum working hours.");
             }
@@ -259,6 +308,28 @@ function assignPerson(target, name, timeslot) {
 
     updateLogPanel();
 }
+
+function findTableId(target) {
+    // Traverse up the DOM tree to find the parent table and return its ID
+    let currentElement = target;
+    while (currentElement && !currentElement.classList.contains('schedule-table')) {
+        currentElement = currentElement.parentElement;
+    }
+    return currentElement ? currentElement.id : null;
+}
+
+function addToTableAssignments(name, timeslot, tableId) {
+    if (tableId && tableAssignments[tableId]) {
+        tableAssignments[tableId].push({ name, timeslot });
+    }
+}
+
+function removeFromTableAssignments(name, timeslot, tableId) {
+    if (tableId && tableAssignments[tableId]) {
+        tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
+    }
+}
+
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
