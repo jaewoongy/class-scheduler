@@ -58,35 +58,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function saveState() {
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+    alert('Schedule saved!');
 }
+
 
 
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
-    console.log('Loading state:', savedAssignments); // Debug log
-
     if (savedAssignments) {
         const loadedAssignments = JSON.parse(savedAssignments);
-        Object.keys(loadedAssignments).forEach(tableId => {
-            tableAssignments[tableId] = loadedAssignments[tableId];
+        Object.keys(tableAssignments).forEach(tableId => {
+            tableAssignments[tableId] = loadedAssignments[tableId] || [];
             updateTable(tableId);
         });
+
+        resetPeopleState();
+        applyLoadedAssignments();
         updateLogPanel();
     } else {
-        console.log('No saved state to load.'); // Debug log
         alert('No saved state to load.');
     }
 }
 
 
-
-
-function resetSchedule() {
+function resetPeopleState() {
     people.forEach(person => {
         person.scheduledHours = 0;
         person.assignedSlots = [];
         person.availability = [...initialAvailability[person.name]];
     });
+}
+
+function applyLoadedAssignments() {
+    Object.values(tableAssignments).forEach(assignments => {
+        assignments.forEach(assignment => {
+            const person = people.find(p => p.name === assignment.name);
+            if (person) {
+                person.scheduledHours++;
+                person.assignedSlots.push(assignment.timeslot);
+                const availabilityIndex = person.availability.indexOf(assignment.timeslot);
+                if (availabilityIndex !== -1) {
+                    person.availability.splice(availabilityIndex, 1);
+                }
+            }
+        });
+    });
+}
+
+
+
+
+
+function resetSchedule() {
+    resetPeopleState(); // Resets people to their initial state
     Object.keys(tableAssignments).forEach(tableId => {
         tableAssignments[tableId] = [];
         updateTable(tableId);
@@ -239,29 +263,28 @@ function showDropdown(event, timeslot) {
 }
 
 function removeAssignment(target, name, timeslot) {
-    // Find the person in the people array
     const person = people.find(p => p.name === name);
     if (person) {
-        // Reduce the person's scheduled hours
+        // Existing removal logic
         person.scheduledHours--;
-
-        // Remove the timeslot from the person's assignedSlots
         person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
-
-        // Add the timeslot back to the person's availability
         person.availability.push(timeslot);
 
-        // Remove the 'filled-timeslot' class to reset the styling
+        // Update UI
         target.classList.remove('filled-timeslot');
-
-        // Clear the 'data-assigned' attribute and reset the cell's text content
         target.removeAttribute('data-assigned');
         target.textContent = 'Available';
 
-        // Update the log panel to reflect the change
+        // Update tableAssignments
+        const tableId = findTableId(target);
+        if (tableId) {
+            tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
+        }
+
         updateLogPanel();
     }
 }
+
 
 function closeDropdowns() {
     document.querySelectorAll('.dropdown').forEach(dropdown => dropdown.remove());
@@ -329,7 +352,6 @@ function removeFromTableAssignments(name, timeslot, tableId) {
         tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
     }
 }
-
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
