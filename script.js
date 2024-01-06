@@ -57,8 +57,15 @@ function createTable(buildingNumber) {
         }
     }
 
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'table-title';
+    titleDiv.contentEditable = true;
+    titleDiv.textContent = `Building ${buildingNumber} (Click to Change Title)`; // Default text
+
+
     const buildingDiv = document.createElement('div');
     buildingDiv.className = 'building';
+    buildingDiv.appendChild(titleDiv); // Append the title first
     buildingDiv.appendChild(table);
 
     return buildingDiv;

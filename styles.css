@@ -70,3 +70,9 @@ body {
     color: white; /* Change text color to ensure readability on red background */
 }
 
+.table-title {
+    padding: 10px;
+    margin-bottom: 5px; /* Space above the table */
+    font-weight: bold;
+    cursor: text;
+}
