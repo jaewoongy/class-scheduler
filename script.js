@@ -1,5 +1,5 @@
 const initialAvailability = {
-    'Alice': ['Mon 10:00 AM', 'Tue 11:00 AM'],
+    'Alice': ['Mon 10:00 AM', 'Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
     'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM'],
     // ... other people
 };
@@ -36,6 +36,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadButton = document.getElementById('load-button');
     
     
+    // Now, add the event listener for handling clicks on .person-summary
+    document.getElementById('schedule-info').addEventListener('click', function(event) {
+        let summaryDiv = event.target.closest('.person-summary');
+        if (summaryDiv) {
+            console.log('Clicked summary for:', summaryDiv.textContent.trim().split(':')[0]);
+            let detailsDiv = summaryDiv.nextElementSibling;
+    
+            // Check if the details are currently visible
+            const isHidden = detailsDiv.classList.toggle('hidden');
+            if (!isHidden) {
+                // If details are not hidden, expand them
+                detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
+            } else {
+                // If details are hidden, collapse them
+                detailsDiv.style.maxHeight = '0';
+            }
+        }
+    });
+    
+
+
     // Add null checks for buttons to avoid errors if they don't exist.
     saveButton?.addEventListener('click', function() {
         saveState();
@@ -54,7 +75,75 @@ document.addEventListener('DOMContentLoaded', function() {
             loadState();
         }
     });
+
+    document.querySelectorAll('.person-summary').forEach(function(summary) {
+        summary.addEventListener('click', function() {
+            // Find the next sibling element that is .person-details
+            var details = this.nextElementSibling;
+
+            // Toggle the .hidden class on .person-details
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                details.style.maxHeight = details.scrollHeight + 'px';
+            } else {
+                details.style.maxHeight = null; // This will reset the max-height
+                details.classList.add('hidden');
+            }
+        });
+    });
+
+    const addStudentButton = document.getElementById('add-student-button');
+    addStudentButton.addEventListener('click', addStudent);
 });
+
+function addStudent() {
+    const studentName = document.getElementById('student-name').value.trim();
+    
+    if (!studentName) {
+        alert('Please enter a student name.');
+        return;
+    }
+
+    const availability = [
+        ...document.getElementById('student-availability-monday').selectedOptions,
+        ...document.getElementById('student-availability-tuesday').selectedOptions,
+        ...document.getElementById('student-availability-wednesday').selectedOptions,
+        ...document.getElementById('student-availability-thursday').selectedOptions,
+        ...document.getElementById('student-availability-friday').selectedOptions,
+    ].map(option => option.value).filter(value => value); // This will exclude any empty strings from options without value
+    
+    if (availability.length === 0) {
+        alert('Please select at least one availability time.');
+        return;
+    }
+    
+    // Assuming `people` is an array in your global scope
+    people.push({
+        name: studentName,
+        availability: availability,
+        maxHours: 10, // Assuming you want to set a default maxHours value
+        scheduledHours: 0,
+        assignedSlots: []
+    });
+
+    // Assuming you have a function to update your UI
+    updateLogPanel();
+
+    // Clear the form for the next input
+    document.getElementById('student-name').value = '';
+    document.querySelectorAll('.student-availability').forEach(select => {
+        Array.from(select.options).forEach(option => option.selected = false);
+    });
+
+    alert('Student added!');
+}
+
+
+
+function resetForm() {
+    document.getElementById('student-name').value = '';
+    document.getElementById('student-availability').selectedIndex = 0;
+}
 
 function saveState() {
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
@@ -355,14 +444,112 @@ function removeFromTableAssignments(name, timeslot, tableId) {
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
-    logPanel.innerHTML = '';
+    logPanel.innerHTML = ''; // Clear the existing log panel content
 
     people.forEach(person => {
-        const remainingHours = person.maxHours - person.scheduledHours;
-        const availability = person.availability.sort().join(', '); // Sort and join the available times
-        const personInfo = document.createElement('div');
-        personInfo.innerHTML = `<strong>${person.name}</strong>: ${person.scheduledHours} hours scheduled, ${remainingHours} hours remaining. Remaining available times: ${availability}`;
-        logPanel.appendChild(personInfo);
+        // Main container for each person's information
+        const personDiv = document.createElement('div');
+        personDiv.className = 'person-div';
+
+        // Clickable summary part for each person
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'person-summary';
+        summaryDiv.textContent = `${person.name}: ${person.scheduledHours} hours scheduled, ${person.maxHours - person.scheduledHours} hours remaining.`;
+
+        // Container for the detailed view of availability
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'person-details hidden';
+
+        // Sorting and grouping availability by day
+        const availabilityByDay = groupAvailabilityByDay(person.availability);
+
+        // Populate detailsDiv with person's availability
+        Object.entries(availabilityByDay).forEach(([day, times]) => {
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'day-div';
+            const dayLabel = document.createElement('strong');
+            dayLabel.textContent = day + ': ';
+            const timesSpan = document.createElement('span');
+            timesSpan.textContent = times.join(', ');
+            dayDiv.appendChild(dayLabel);
+            dayDiv.appendChild(timesSpan);
+            detailsDiv.appendChild(dayDiv);
+        });
+
+        // Append summary and details to personDiv
+        personDiv.appendChild(summaryDiv);
+        personDiv.appendChild(detailsDiv);
+
+        // Append personDiv to logPanel
+        logPanel.appendChild(personDiv);
+
+        // Add event listener to summaryDiv for toggling detailsDiv
+        summaryDiv.addEventListener('click', function() {
+            // This will toggle the .hidden class on detailsDiv
+            detailsDiv.classList.toggle('hidden');
+            if (detailsDiv.classList.contains('hidden')) {
+                detailsDiv.style.maxHeight = null;
+            } else {
+                detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
+            }
+        });
+
+        summaryDiv.addEventListener('click', function() {
+            console.log('Clicked summary for:', person.name); // Check if the event is firing
+            // ... rest of your code ...
+        });
+        
     });
 }
 
+
+
+function groupAvailabilityByDay(availabilityList) {
+    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    let groupedAvailability = weekDays.reduce((acc, day) => ({ ...acc, [day]: [] }), {});
+
+    availabilityList.forEach(time => {
+        const [day, ...rest] = time.split(' ');
+        if (groupedAvailability[day] !== undefined) {
+            groupedAvailability[day].push(rest.join(' '));
+        }
+    });
+
+    // Sorting each day's times in ascending order
+    for (let day of weekDays) {
+        groupedAvailability[day].sort((a, b) => convertTo24hTime(a) - convertTo24hTime(b));
+    }
+
+    return groupedAvailability;
+}
+
+
+
+
+
+function convertTo24hTime(time12h) {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') {
+        hours = '00';
+    }
+    if (modifier === 'PM') {
+        hours = parseInt(hours, 10) + 12;
+    }
+    return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+}
+
+
+updateLogPanel();
+
+document.querySelectorAll('.person-summary').forEach(summary => {
+    summary.addEventListener('click', function() {
+        const details = this.nextElementSibling;
+        details.classList.toggle('hidden');
+        if (details.classList.contains('hidden')) {
+            details.style.maxHeight = '0';
+        } else {
+            details.style.maxHeight = details.scrollHeight + 'px';
+        }
+    });
+});

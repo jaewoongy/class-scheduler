@@ -3,7 +3,8 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f4f4f4;
-    overflow: hidden;
+    overflow-x: hidden; /* Only prevent horizontal scrolling */
+    overflow-y: auto; /* Allow vertical scrolling */
 }
 
 .building {
@@ -17,7 +18,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    font-size: 10px;
+    font-size: 14px;
 }
 
 .schedule-table th, .schedule-table td {
@@ -87,3 +88,118 @@ body {
     margin-right: 10px;
     cursor: pointer;
 }
+
+#form-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    width: 100%; /* Ensure the form container spans the full width */
+    margin-top: 60px; /* Make space for the fixed position of the .scrollable-form */
+}
+
+.scrollable-form {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 10px;
+    background-color: #f4f4f4;
+    border-bottom: 1px solid #ddd;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+#student-availability {
+    flex: 1; /* Allows the time selection bar to expand and take up extra space */
+    margin: 0 10px;
+    width: auto; /* Allow the select element to size according to its content */
+}
+
+#student-name {
+    flex: 0 1 150px; /* Don't grow, allow shrink, start with 150px */
+}
+
+#add-student-button {
+    flex: 0 0 auto; /* Don't grow or shrink */
+    margin-left: 10px; /* Add some space to the left of the button */
+}
+
+/* ... other existing styles ... */
+
+/* Additional styles for the select elements to make them horizontally scrollable */
+#student-availability-monday,
+#student-availability-tuesday,
+#student-availability-wednesday,
+#student-availability-thursday,
+#student-availability-friday {
+    flex: 0 0 auto; /* Don't grow, don't shrink, and don't base size on content */
+    width: 160px; /* Set a fixed width for each select */
+    margin-right: 5px; /* Add space between the select elements */
+}
+
+
+/* General styles */
+.person-div {
+    background-color: #ffffff;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.person-summary {
+    padding: 10px 15px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #eaeaea;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+}
+
+.person-summary:hover {
+    background-color: #f0f0f0;
+}
+
+.person-details {
+    transition: max-height 0.3s ease;
+    max-height: 0; /* Start collapsed */
+    overflow: hidden;
+}
+
+.hidden {
+    max-height: 0; /* Ensures that the section is collapsed */
+}
+
+.day-div {
+    margin-top: 10px;
+    line-height: 1.6;
+}
+
+.day-div:first-child {
+    margin-top: 0;
+}
+
+.day-div strong {
+    display: inline-block;
+    min-width: 80px; /* Ensure labels align */
+    font-weight: normal;
+    color: #555;
+}
+
+.day-div span {
+    color: #666;
+}
+
+/* Animations for collapsing */
+.person-details {
+    transition: all 0.3s ease;
+    max-height: 0;
+    overflow: hidden;
+}
+

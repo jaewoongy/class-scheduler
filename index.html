@@ -7,6 +7,52 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="form-container">
+        <input type="text" id="student-name" placeholder="Student Name">
+    
+        <select id="student-availability-monday" class="student-availability" multiple>
+            <option value="">Monday Times</option>
+            <!-- Add Monday timeslots as options -->
+            <option value="Mon 10:00 AM">10:00 AM</option>
+            <option value="Mon 11:00 AM">11:00 AM</option>
+            <!-- ... more times if needed -->
+        </select>
+    
+        <select id="student-availability-tuesday" class="student-availability" multiple>
+            <option value="">Tuesday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Tue 10:00 AM">10:00 AM</option>
+            <option value="Tue 11:00 AM">11:00 AM</option>
+            <!-- ... more times if needed -->
+        </select>
+    
+        <select id="student-availability-wednesday" class="student-availability" multiple>
+            <option value="">Wednesday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Wed 10:00 AM">10:00 AM</option>
+            <option value="Wed 11:00 AM">11:00 AM</option>
+            <!-- ... more times if needed -->
+        </select>
+
+        <select id="student-availability-thursday" class="student-availability" multiple>
+            <option value="">Thursday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Thur 10:00 AM">10:00 AM</option>
+            <option value="Thur 11:00 AM">11:00 AM</option>
+            <!-- ... more times if needed -->
+        </select>
+
+        <select id="student-availability-friday" class="student-availability" multiple>
+            <option value="">Friday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Fri 10:00 AM">10:00 AM</option>
+            <option value="Fri 11:00 AM">11:00 AM</option>
+            <!-- ... more times if needed -->
+        </select>
+    
+        <button id="add-student-button">Add Student</button>
+    </div>
+
     <div id="schedule-container">
         <!-- Schedule tables will be dynamically generated here -->
     </div>
@@ -25,6 +71,9 @@
     <div id="table4" class="table-container"></div>
     <div id="table5" class="table-container"></div>
     <div id="table6" class="table-container"></div>
+
+    
+    
 
 
     <script src="script.js"></script>
