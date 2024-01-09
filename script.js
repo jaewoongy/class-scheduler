@@ -54,8 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    
-
 
     // Add null checks for buttons to avoid errors if they don't exist.
     saveButton?.addEventListener('click', function() {
@@ -94,7 +92,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const addStudentButton = document.getElementById('add-student-button');
     addStudentButton.addEventListener('click', addStudent);
+
+
+    updateLogPanel();
+    attachSummaryEventListeners();
 });
+
+document.addEventListener('DOMContentLoaded', updateLogPanel);
+
 
 function addStudent() {
     const studentName = document.getElementById('student-name').value.trim();
@@ -136,6 +141,8 @@ function addStudent() {
     });
 
     alert('Student added!');
+    updateLogPanel();
+    attachSummaryEventListeners();
 }
 
 
@@ -148,6 +155,7 @@ function resetForm() {
 function saveState() {
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
     alert('Schedule saved!');
+    updateLogPanel();
 }
 
 
@@ -167,6 +175,7 @@ function loadState() {
     } else {
         alert('No saved state to load.');
     }
+    updateLogPanel();
 }
 
 
@@ -370,8 +379,10 @@ function removeAssignment(target, name, timeslot) {
             tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
         }
 
-        updateLogPanel();
+        
     }
+    updateLogPanel();
+    attachSummaryEventListeners(); 
 }
 
 
@@ -419,6 +430,7 @@ function assignPerson(target, name, timeslot) {
     }
 
     updateLogPanel();
+    attachSummaryEventListeners();
 }
 
 function findTableId(target) {
@@ -444,63 +456,40 @@ function removeFromTableAssignments(name, timeslot, tableId) {
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
-    logPanel.innerHTML = ''; // Clear the existing log panel content
+    logPanel.innerHTML = '';
 
     people.forEach(person => {
-        // Main container for each person's information
         const personDiv = document.createElement('div');
         personDiv.className = 'person-div';
 
-        // Clickable summary part for each person
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'person-summary';
         summaryDiv.textContent = `${person.name}: ${person.scheduledHours} hours scheduled, ${person.maxHours - person.scheduledHours} hours remaining.`;
 
-        // Container for the detailed view of availability
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'person-details hidden';
 
-        // Sorting and grouping availability by day
         const availabilityByDay = groupAvailabilityByDay(person.availability);
-
-        // Populate detailsDiv with person's availability
         Object.entries(availabilityByDay).forEach(([day, times]) => {
             const dayDiv = document.createElement('div');
             dayDiv.className = 'day-div';
-            const dayLabel = document.createElement('strong');
-            dayLabel.textContent = day + ': ';
-            const timesSpan = document.createElement('span');
-            timesSpan.textContent = times.join(', ');
-            dayDiv.appendChild(dayLabel);
-            dayDiv.appendChild(timesSpan);
+            dayDiv.textContent = `${day}: ${times.join(', ')}`;
             detailsDiv.appendChild(dayDiv);
         });
 
-        // Append summary and details to personDiv
         personDiv.appendChild(summaryDiv);
         personDiv.appendChild(detailsDiv);
-
-        // Append personDiv to logPanel
         logPanel.appendChild(personDiv);
-
-        // Add event listener to summaryDiv for toggling detailsDiv
-        summaryDiv.addEventListener('click', function() {
-            // This will toggle the .hidden class on detailsDiv
-            detailsDiv.classList.toggle('hidden');
-            if (detailsDiv.classList.contains('hidden')) {
-                detailsDiv.style.maxHeight = null;
-            } else {
-                detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
-            }
-        });
-
-        summaryDiv.addEventListener('click', function() {
-            console.log('Clicked summary for:', person.name); // Check if the event is firing
-            // ... rest of your code ...
-        });
-        
     });
+
+    attachSummaryEventListeners();
 }
+
+
+
+// Call updateLogPanel initially to set up the log panel
+updateLogPanel();
+
 
 
 
@@ -539,17 +528,41 @@ function convertTo24hTime(time12h) {
     return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
 }
 
+function toggleDetails(event) {
+    const detailsDiv = event.target.nextElementSibling;
+    const isHidden = detailsDiv.classList.toggle('hidden');
+    detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+}
+
+function attachSummaryEventListeners() {
+    const summaries = document.querySelectorAll('.person-summary');
+    summaries.forEach(summary => {
+        summary.addEventListener('click', toggleDetails);
+    });
+}
+
 
 updateLogPanel();
 
-document.querySelectorAll('.person-summary').forEach(summary => {
-    summary.addEventListener('click', function() {
-        const details = this.nextElementSibling;
-        details.classList.toggle('hidden');
-        if (details.classList.contains('hidden')) {
-            details.style.maxHeight = '0';
-        } else {
-            details.style.maxHeight = details.scrollHeight + 'px';
-        }
-    });
+
+function toggleDetails(event) {
+    // Debugging logs
+    console.log("Toggle details function called");
+
+    const personDiv = event.target.closest('.person-div');
+    const detailsDiv = personDiv.querySelector('.person-details');
+    
+    // Debugging logs
+    console.log("personDiv:", personDiv);
+    console.log("detailsDiv:", detailsDiv);
+
+    const isHidden = detailsDiv.classList.toggle('hidden');
+    detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+}
+
+
+document.getElementById('schedule-info').addEventListener('click', function(event) {
+    if (event.target.classList.contains('person-summary')) {
+        toggleDetails(event);
+    }
 });
