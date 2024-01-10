@@ -137,6 +137,7 @@ body {
 #student-availability-wednesday,
 #student-availability-thursday,
 #student-availability-friday {
+    height: 10em; /* Double the default height */
     flex: 0 0 auto; /* Don't grow, don't shrink, and don't base size on content */
     width: 160px; /* Set a fixed width for each select */
     margin-right: 5px; /* Add space between the select elements */
@@ -203,3 +204,7 @@ body {
     overflow: hidden;
 }
 
+#drop-in-hours, #group-tutoring-hours {
+    height: 2em; /* Adjust height as needed */
+    /* Other styles */
+}

@@ -7,51 +7,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="form-container">
-        <input type="text" id="student-name" placeholder="Student Name">
-    
-        <select id="student-availability-monday" class="student-availability" multiple>
-            <option value="">Monday Times</option>
-            <!-- Add Monday timeslots as options -->
-            <option value="Mon 10:00 AM">10:00 AM</option>
-            <option value="Mon 11:00 AM">11:00 AM</option>
-            <!-- ... more times if needed -->
-        </select>
-    
-        <select id="student-availability-tuesday" class="student-availability" multiple>
-            <option value="">Tuesday Times</option>
-            <!-- Add Tuesday timeslots as options -->
-            <option value="Tue 10:00 AM">10:00 AM</option>
-            <option value="Tue 11:00 AM">11:00 AM</option>
-            <!-- ... more times if needed -->
-        </select>
-    
-        <select id="student-availability-wednesday" class="student-availability" multiple>
-            <option value="">Wednesday Times</option>
-            <!-- Add Tuesday timeslots as options -->
-            <option value="Wed 10:00 AM">10:00 AM</option>
-            <option value="Wed 11:00 AM">11:00 AM</option>
-            <!-- ... more times if needed -->
-        </select>
-
-        <select id="student-availability-thursday" class="student-availability" multiple>
-            <option value="">Thursday Times</option>
-            <!-- Add Tuesday timeslots as options -->
-            <option value="Thur 10:00 AM">10:00 AM</option>
-            <option value="Thur 11:00 AM">11:00 AM</option>
-            <!-- ... more times if needed -->
-        </select>
-
-        <select id="student-availability-friday" class="student-availability" multiple>
-            <option value="">Friday Times</option>
-            <!-- Add Tuesday timeslots as options -->
-            <option value="Fri 10:00 AM">10:00 AM</option>
-            <option value="Fri 11:00 AM">11:00 AM</option>
-            <!-- ... more times if needed -->
-        </select>
-    
-        <button id="add-student-button">Add Student</button>
+    <div id="control-panel">
+        <button id="save-button">Save Schedule</button>
+        <button id="reset-button">Reset Schedule</button>
+        <button id="load-button">Load Schedule</button>
     </div>
+
 
     <div id="schedule-container">
         <!-- Schedule tables will be dynamically generated here -->
@@ -59,11 +20,6 @@
 
     <div id="schedule-info"></div>
 
-    <div id="control-panel">
-        <button id="save-button">Save Schedule</button>
-        <button id="reset-button">Reset Schedule</button>
-        <button id="load-button">Load Schedule</button>
-    </div>
     
     <div id="table1" class="table-container"></div>
     <div id="table2" class="table-container"></div>
@@ -73,7 +29,100 @@
     <div id="table6" class="table-container"></div>
 
     
+    <div id="form-container">
+        <input type="text" id="student-name" placeholder="Student Name / Subject">
+        <input type="number" id="drop-in-hours" placeholder="Drop in Hours">
+        <input type="number" id="group-tutoring-hours" placeholder="Group Tutoring Hours">
     
+        <select id="student-availability-monday" class="student-availability" multiple>
+            <option value="">Available Monday Times</option>
+            <!-- Add Monday timeslots as options -->
+            <option value="Mon 10:00 AM">10:00 AM</option>
+            <option value="Mon 11:00 AM">11:00 AM</option>
+            <option value="Mon 12:00 PM">12:00 PM</option>
+            <option value="Mon 1:00 PM">1:00 PM</option>
+            <option value="Mon 2:00 PM">2:00 PM</option>
+            <option value="Mon 3:00 PM">3:00 PM</option>
+            <option value="Mon 4:00 PM">4:00 PM</option>
+            <option value="Mon 5:00 PM">5:00 PM</option>
+            <option value="Mon 6:00 PM">6:00 PM</option>
+            <option value="Mon 7:00 PM">7:00 PM</option>
+            <option value="Mon 8:00 PM">8:00 PM</option>
+
+
+            <!-- ... more times if needed -->
+        </select>
+    
+        <select id="student-availability-tuesday" class="student-availability" multiple>
+            <option value="">Available Tuesday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Tue 10:00 AM">10:00 AM</option>
+            <option value="Tue 11:00 AM">11:00 AM</option>
+            <option value="Tue 12:00 PM">12:00 PM</option>
+            <option value="Tue 1:00 PM">1:00 PM</option>
+            <option value="Tue 2:00 PM">2:00 PM</option>
+            <option value="Tue 3:00 PM">3:00 PM</option>
+            <option value="Tue 4:00 PM">4:00 PM</option>
+            <option value="Tue 5:00 PM">5:00 PM</option>
+            <option value="Tue 6:00 PM">6:00 PM</option>
+            <option value="Tue 7:00 PM">7:00 PM</option>
+            <option value="Tue 8:00 PM">8:00 PM</option>
+            <!-- ... more times if needed -->
+        </select>
+    
+        <select id="student-availability-wednesday" class="student-availability" multiple>
+            <option value="">Available Wednesday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Wed 10:00 AM">10:00 AM</option>
+            <option value="Wed 11:00 AM">11:00 AM</option>
+            <option value="Wed 12:00 PM">12:00 PM</option>
+            <option value="Wed 1:00 PM">1:00 PM</option>
+            <option value="Wed 2:00 PM">2:00 PM</option>
+            <option value="Wed 3:00 PM">3:00 PM</option>
+            <option value="Wed 4:00 PM">4:00 PM</option>
+            <option value="Wed 5:00 PM">5:00 PM</option>
+            <option value="Wed 6:00 PM">6:00 PM</option>
+            <option value="Wed 7:00 PM">7:00 PM</option>
+            <option value="Wed 8:00 PM">8:00 PM</option>
+            <!-- ... more times if needed -->
+        </select>
+
+        <select id="student-availability-thursday" class="student-availability" multiple>
+            <option value="">Available Thursday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Thu 10:00 AM">10:00 AM</option>
+            <option value="Thu 11:00 AM">11:00 AM</option>
+            <option value="Thu 12:00 PM">12:00 PM</option>
+            <option value="Thu 1:00 PM">1:00 PM</option>
+            <option value="Thu 2:00 PM">2:00 PM</option>
+            <option value="Thu 3:00 PM">3:00 PM</option>
+            <option value="Thu 4:00 PM">4:00 PM</option>
+            <option value="Thu 5:00 PM">5:00 PM</option>
+            <option value="Thu 6:00 PM">6:00 PM</option>
+            <option value="Thu 7:00 PM">7:00 PM</option>
+            <option value="Thu 8:00 PM">8:00 PM</option>
+            <!-- ... more times if needed -->
+        </select>
+
+        <select id="student-availability-friday" class="student-availability" multiple>
+            <option value="">Available Friday Times</option>
+            <!-- Add Tuesday timeslots as options -->
+            <option value="Fri 10:00 AM">10:00 AM</option>
+            <option value="Fri 11:00 AM">11:00 AM</option>
+            <option value="Fri 12:00 PM">12:00 PM</option>
+            <option value="Fri 1:00 PM">1:00 PM</option>
+            <option value="Fri 2:00 PM">2:00 PM</option>
+            <option value="Fri 3:00 PM">3:00 PM</option>
+            <option value="Fri 4:00 PM">4:00 PM</option>
+            <option value="Fri 5:00 PM">5:00 PM</option>
+            <option value="Fri 6:00 PM">6:00 PM</option>
+            <option value="Fri 7:00 PM">7:00 PM</option>
+            <option value="Fri 8:00 PM">8:00 PM</option>
+            <!-- ... more times if needed -->
+        </select>
+    
+        <button id="add-student-button">Add Student</button>
+    </div>
 
 
     <script src="script.js"></script>

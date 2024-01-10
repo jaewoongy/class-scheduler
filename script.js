@@ -1,12 +1,29 @@
+// Assuming initialAvailability doesn't need to change
 const initialAvailability = {
-    'Alice': ['Mon 10:00 AM', 'Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
-    'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM'],
+    'Alice': ['Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
+    'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 12:00 PM'],
     // ... other people
 };
 
 const people = [
-    { name: 'Alice', availability: [...initialAvailability['Alice']], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
-    { name: 'Bob', availability: [...initialAvailability['Bob']], maxHours: 10, scheduledHours: 0, assignedSlots: [] },
+    {
+        name: 'Alice',
+        availability: [...initialAvailability['Alice']],
+        maxDropInHours: 5,
+        maxGroupTutoringHours: 5,
+        scheduledDropInHours: 0,
+        scheduledGroupTutoringHours: 0,
+        assignedSlots: []
+    },
+    {
+        name: 'Bob',
+        availability: [...initialAvailability['Bob']],
+        maxDropInHours: 5, // half of maxHours as an example
+        maxGroupTutoringHours: 5, // the other half
+        scheduledDropInHours: 0,
+        scheduledGroupTutoringHours: 0,
+        assignedSlots: []
+    },
     // ... other people
 ];
 
@@ -103,47 +120,59 @@ document.addEventListener('DOMContentLoaded', updateLogPanel);
 
 function addStudent() {
     const studentName = document.getElementById('student-name').value.trim();
-    
+    const dropInHoursInput = document.getElementById('drop-in-hours').value;
+    const groupTutoringHoursInput = document.getElementById('group-tutoring-hours').value;
+
+    const dropInHours = parseInt(dropInHoursInput, 10) || 0;
+    const groupTutoringHours = parseInt(groupTutoringHoursInput, 10) || 0;
+
     if (!studentName) {
         alert('Please enter a student name.');
         return;
     }
 
+    // Ensure the availability select elements are named correctly and exist
     const availability = [
         ...document.getElementById('student-availability-monday').selectedOptions,
         ...document.getElementById('student-availability-tuesday').selectedOptions,
         ...document.getElementById('student-availability-wednesday').selectedOptions,
         ...document.getElementById('student-availability-thursday').selectedOptions,
         ...document.getElementById('student-availability-friday').selectedOptions,
-    ].map(option => option.value).filter(value => value); // This will exclude any empty strings from options without value
-    
+    ].map(option => option.value).filter(value => value);
+
     if (availability.length === 0) {
         alert('Please select at least one availability time.');
         return;
     }
-    
-    // Assuming `people` is an array in your global scope
+
+    // Add the new student to the people array
     people.push({
         name: studentName,
         availability: availability,
-        maxHours: 10, // Assuming you want to set a default maxHours value
-        scheduledHours: 0,
+        maxDropInHours: dropInHours,
+        maxGroupTutoringHours: groupTutoringHours,
+        scheduledDropInHours: 0,
+        scheduledGroupTutoringHours: 0,
         assignedSlots: []
     });
 
-    // Assuming you have a function to update your UI
-    updateLogPanel();
-
     // Clear the form for the next input
     document.getElementById('student-name').value = '';
-    document.querySelectorAll('.student-availability').forEach(select => {
-        Array.from(select.options).forEach(option => option.selected = false);
+    document.getElementById('drop-in-hours').value = '';
+    document.getElementById('group-tutoring-hours').value = '';
+    document.querySelectorAll('.student-availability select').forEach(select => {
+        select.selectedIndex = 0;
     });
 
     alert('Student added!');
-    updateLogPanel();
-    attachSummaryEventListeners();
+    updateLogPanel(); // Function to update the display of the schedule
 }
+
+
+// Be sure to call these functions after you define them
+updateLogPanel();
+attachSummaryEventListeners();
+
 
 
 
@@ -244,7 +273,15 @@ function updateAllTables() {
     Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
 }
 
+function removePerson(personName) {
+    // Filter out the person to be removed
+    people = people.filter(person => person.name !== personName);
 
+    // Update UI
+    updateLogPanel();
+    attachSummaryEventListeners();
+    // Any additional UI updates as required
+}
 
 function resetLocalStorage() {
     localStorage.removeItem('scheduleState');
@@ -337,14 +374,25 @@ function showDropdown(event, timeslot) {
     // Populate the rest of the dropdown
     people.forEach(person => {
         if (person.availability.includes(timeslot)) {
-            const option = document.createElement('div');
-            option.className = 'dropdown-content';
-            option.textContent = person.name;
-            option.onclick = function() {
-                assignPerson(event.target, person.name, timeslot);
+            // Drop In Hours Option
+            const dropInOption = document.createElement('div');
+            dropInOption.className = 'dropdown-content';
+            dropInOption.textContent = person.name + ' - Drop In Hours';
+            dropInOption.onclick = function() {
+                assignPerson(event.target, person.name, timeslot, 'dropIn');
                 closeDropdowns();
             };
-            dropdown.appendChild(option);
+            dropdown.appendChild(dropInOption);
+
+            // Group Tutoring Hours Option
+            const groupTutoringOption = document.createElement('div');
+            groupTutoringOption.className = 'dropdown-content';
+            groupTutoringOption.textContent = person.name + ' - Group Tutoring Hours';
+            groupTutoringOption.onclick = function() {
+                assignPerson(event.target, person.name, timeslot, 'groupTutoring');
+                closeDropdowns();
+            };
+            dropdown.appendChild(groupTutoringOption);
         }
     });
 
@@ -360,12 +408,16 @@ function showDropdown(event, timeslot) {
     event.stopPropagation();
 }
 
-function removeAssignment(target, name, timeslot) {
+
+function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
     if (person) {
-        // Existing removal logic
-        person.scheduledHours--;
-        person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
+        if (hourType === 'dropIn') {
+            person.scheduledDropInHours--;
+        } else {
+            person.scheduledGroupTutoringHours--;
+        }
+        person.assignedSlots = person.assignedSlots.filter(slot => slot.timeslot !== timeslot);
         person.availability.push(timeslot);
 
         // Update UI
@@ -374,23 +426,22 @@ function removeAssignment(target, name, timeslot) {
         target.textContent = 'Available';
 
         // Update tableAssignments
-        const tableId = findTableId(target);
         if (tableId) {
             tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
         }
 
-        
+        updateLogPanel();
+        attachSummaryEventListeners();
     }
-    updateLogPanel();
-    attachSummaryEventListeners(); 
 }
+
 
 
 function closeDropdowns() {
     document.querySelectorAll('.dropdown').forEach(dropdown => dropdown.remove());
 }
 
-function assignPerson(target, name, timeslot) {
+function assignPerson(target, name, timeslot, hourType) {
     const person = people.find(p => p.name === name);
     if (person) {
         // Identify the table ID from the target element's parents
@@ -398,40 +449,38 @@ function assignPerson(target, name, timeslot) {
 
         // Check if this slot is already assigned to someone else
         if (target.dataset.assigned && target.dataset.assigned !== name) {
-            // Revert the previously assigned person's hours and availability
-            removeAssignment(target, target.dataset.assigned, timeslot, tableId);
+            // Extract hour type from the existing assignment if necessary
+            let existingHourType = person.assignedSlots.find(slot => slot.timeslot === timeslot)?.type;
+            removeAssignment(target, target.dataset.assigned, timeslot, existingHourType, tableId);
         }
 
-        // If the slot is already assigned to this person, remove the assignment.
-        if (target.dataset.assigned === name) {
-            target.classList.remove('filled-timeslot');
-            target.textContent = 'Available';
-            target.removeAttribute('data-assigned');
-            person.scheduledHours--;
-            person.availability.push(timeslot); // Add back the available time
-            person.assignedSlots = person.assignedSlots.filter(slot => slot !== timeslot);
-            // Remove from tableAssignments
-            removeFromTableAssignments(name, timeslot, tableId);
-        } else {
-            // Assign the new person to the slot.
-            if (person.scheduledHours < person.maxHours) {
-                target.classList.add('filled-timeslot');
-                target.textContent = name;
-                target.dataset.assigned = name;
-                person.scheduledHours++;
-                person.assignedSlots.push(timeslot);
-                person.availability = person.availability.filter(availableTime => availableTime !== timeslot);
-                // Add to tableAssignments
-                addToTableAssignments(name, timeslot, tableId);
+        // Determine the available hours based on the type
+        let maxHours = hourType === 'dropIn' ? person.maxDropInHours : person.maxGroupTutoringHours;
+        let scheduledHours = hourType === 'dropIn' ? person.scheduledDropInHours : person.scheduledGroupTutoringHours;
+
+        // Assign the new person to the slot if hours are available
+        if (scheduledHours < maxHours) {
+            target.classList.add('filled-timeslot');
+            target.textContent = name;
+            target.dataset.assigned = name;
+            if (hourType === 'dropIn') {
+                person.scheduledDropInHours++;
             } else {
-                alert(name + " has reached their maximum working hours.");
+                person.scheduledGroupTutoringHours++;
             }
+            person.assignedSlots.push({ timeslot, type: hourType });
+            person.availability = person.availability.filter(availableTime => availableTime !== timeslot);
+            addToTableAssignments(name, timeslot, hourType, tableId);
+        } else {
+            alert(name + " has reached their maximum " + (hourType === 'dropIn' ? "drop-in" : "group tutoring") + " hours.");
         }
     }
 
     updateLogPanel();
     attachSummaryEventListeners();
 }
+
+
 
 function findTableId(target) {
     // Traverse up the DOM tree to find the parent table and return its ID
@@ -464,7 +513,10 @@ function updateLogPanel() {
 
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'person-summary';
-        summaryDiv.textContent = `${person.name}: ${person.scheduledHours} hours scheduled, ${person.maxHours - person.scheduledHours} hours remaining.`;
+        const dropInHoursRemaining = person.maxDropInHours - person.scheduledDropInHours;
+        const groupHoursRemaining = person.maxGroupTutoringHours - person.scheduledGroupTutoringHours;
+
+        summaryDiv.textContent = `${person.name}: ${dropInHoursRemaining} Drop in Hours, ${groupHoursRemaining} Group Tutoring Hours remaining.`;
 
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'person-details hidden';
