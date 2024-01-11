@@ -505,36 +505,38 @@ function removeFromTableAssignments(name, timeslot, tableId) {
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
-    logPanel.innerHTML = '';
+    logPanel.innerHTML = ''; // Clear existing content
 
-    people.forEach(person => {
+    people.forEach((person, index) => {
         const personDiv = document.createElement('div');
         personDiv.className = 'person-div';
 
         const summaryDiv = document.createElement('div');
         summaryDiv.className = 'person-summary';
-        const dropInHoursRemaining = person.maxDropInHours - person.scheduledDropInHours;
-        const groupHoursRemaining = person.maxGroupTutoringHours - person.scheduledGroupTutoringHours;
+        summaryDiv.textContent = `${person.name}: ${person.scheduledDropInHours}/${person.maxDropInHours} Drop in Hours, ${person.scheduledGroupTutoringHours}/${person.maxGroupTutoringHours} Group Tutoring Hours.`;
 
-        summaryDiv.textContent = `${person.name}: ${dropInHoursRemaining} Drop in Hours, ${groupHoursRemaining} Group Tutoring Hours remaining.`;
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'X';
+        removeButton.className = 'remove-button';
+        removeButton.onclick = function() {
+            removePerson(index);
+        };
 
-        const detailsDiv = document.createElement('div');
-        detailsDiv.className = 'person-details hidden';
-
-        const availabilityByDay = groupAvailabilityByDay(person.availability);
-        Object.entries(availabilityByDay).forEach(([day, times]) => {
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'day-div';
-            dayDiv.textContent = `${day}: ${times.join(', ')}`;
-            detailsDiv.appendChild(dayDiv);
-        });
-
+        summaryDiv.appendChild(removeButton);
         personDiv.appendChild(summaryDiv);
-        personDiv.appendChild(detailsDiv);
         logPanel.appendChild(personDiv);
     });
+}
 
-    attachSummaryEventListeners();
+
+function removePerson(index) {
+    if (confirm('Are you sure you want to remove this person?')) {
+        // Remove the person from the array
+        people.splice(index, 1);
+
+        // Update the display
+        updateLogPanel();
+    }
 }
 
 

@@ -208,3 +208,17 @@ body {
     height: 2em; /* Adjust height as needed */
     /* Other styles */
 }
+
+.remove-button {
+    color: white;
+    background-color: red;
+    border: none;
+    border-radius: 5px;
+    padding: 2px 5px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.remove-button:hover {
+    background-color: darkred;
+}
