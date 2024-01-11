@@ -5,7 +5,7 @@ const initialAvailability = {
     // ... other people
 };
 
-const people = [
+let people = [
     {
         name: 'Alice',
         availability: [...initialAvailability['Alice']],
@@ -29,7 +29,7 @@ const people = [
 
 
 // Object to track assignments per table
-const tableAssignments = {
+let tableAssignments = {
     table1: [],
     table2: [],
     table3: [],
@@ -183,6 +183,7 @@ function resetForm() {
 
 function saveState() {
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+    localStorage.setItem('people', JSON.stringify(people));
     alert('Schedule saved!');
     updateLogPanel();
 }
@@ -191,26 +192,30 @@ function saveState() {
 
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
+    const savedPeople = localStorage.getItem('people');
+    
     if (savedAssignments) {
-        const loadedAssignments = JSON.parse(savedAssignments);
-        Object.keys(tableAssignments).forEach(tableId => {
-            tableAssignments[tableId] = loadedAssignments[tableId] || [];
-            updateTable(tableId);
-        });
+        tableAssignments = JSON.parse(savedAssignments); // reassigning is now allowed
+        Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
+    }
 
+    if (savedPeople) {
+        people = JSON.parse(savedPeople); // reassigning is now allowed
         resetPeopleState();
         applyLoadedAssignments();
-        updateLogPanel();
     } else {
         alert('No saved state to load.');
     }
+    
     updateLogPanel();
 }
 
 
+
 function resetPeopleState() {
     people.forEach(person => {
-        person.scheduledHours = 0;
+        person.scheduledDropInHours = 0;
+        person.scheduledGroupTutoringHours = 0;
         person.assignedSlots = [];
         person.availability = [...initialAvailability[person.name]];
     });
@@ -221,8 +226,13 @@ function applyLoadedAssignments() {
         assignments.forEach(assignment => {
             const person = people.find(p => p.name === assignment.name);
             if (person) {
-                person.scheduledHours++;
-                person.assignedSlots.push(assignment.timeslot);
+                const hourType = assignment.type;
+                if (hourType === 'dropIn') {
+                    person.scheduledDropInHours++;
+                } else {
+                    person.scheduledGroupTutoringHours++;
+                }
+                person.assignedSlots.push(assignment);
                 const availabilityIndex = person.availability.indexOf(assignment.timeslot);
                 if (availabilityIndex !== -1) {
                     person.availability.splice(availabilityIndex, 1);
@@ -275,22 +285,17 @@ function updateAllTables() {
 
 function removePerson(index) {
     if (confirm('Are you sure you want to remove this person?')) {
-        // Update the scheduled hours for all assignments
-        people[index].assignedSlots.forEach(assignment => {
-            if (assignment.type === 'dropIn') {
-                people[index].scheduledDropInHours--;
-            } else if (assignment.type === 'groupTutoring') {
-                people[index].scheduledGroupTutoringHours--;
-            }
+        const person = people[index];
+        person.assignedSlots.forEach(slot => {
+            const tableId = findTableIdForTimeslot(slot.timeslot);
+            removeFromTableAssignments(person.name, slot.timeslot, tableId);
         });
-        
-        // Now safely remove the person from the array
         people.splice(index, 1);
-
-        // Update the display
         updateLogPanel();
+        saveState(); // Optionally save the state after removal
     }
 }
+
 function resetLocalStorage() {
     localStorage.removeItem('scheduleState');
     // Optionally clear the titles if needed
@@ -421,25 +426,32 @@ function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
     if (!person) return;
 
-    // Find the assignment index
-    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
+    // Check if the person has this specific assignment (timeslot and hour type)
+    const assignmentIndex = person.assignedSlots.findIndex(assignment => 
+        assignment.timeslot === timeslot && assignment.type === hourType);
+
     if (assignmentIndex !== -1) {
         // Remove the assignment
         person.assignedSlots.splice(assignmentIndex, 1);
+
+        // Decrement the appropriate hour type
         if (hourType === 'dropIn') {
             person.scheduledDropInHours--;
-        } else {
+        } else if (hourType === 'groupTutoring') {
             person.scheduledGroupTutoringHours--;
         }
     }
 
-    // Update the UI to reflect the removal
+    // Update the UI
     target.classList.remove('filled-timeslot');
     target.textContent = 'Available';
     delete target.dataset.assigned;
     delete target.dataset.hourType;
 
+    // Update tableAssignments
     removeFromTableAssignments(name, timeslot, hourType, tableId);
+
+    // Update the log panel
     updateLogPanel();
 }
 
@@ -461,7 +473,10 @@ function assignPerson(target, name, timeslot, hourType) {
 
     // If the slot is already assigned, we need to remove the previous person or hour type from the slot
     if (target.dataset.assigned) {
-        removeAssignment(target, target.dataset.assigned, timeslot, target.dataset.hourType, tableId);
+        // Remove previous assignment
+        const previousAssignedName = target.dataset.assigned;
+        const previousHourType = target.dataset.hourType;
+        removeAssignment(target, previousAssignedName, timeslot, previousHourType, tableId);
     }
 
     // Check if the person has remaining hours for the chosen hour type
@@ -522,12 +537,10 @@ function addToTableAssignments(name, timeslot, hourType, tableId) {
 }
 
 function removeFromTableAssignments(name, timeslot, hourType, tableId) {
-    if (!tableId || !tableAssignments[tableId]) return;
-
-    // Filter out the assignment to remove
-    tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
-        return !(assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType);
-    });
+    if (tableId && tableAssignments[tableId]) {
+        tableAssignments[tableId] = tableAssignments[tableId].filter(assignment =>
+            !(assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType));
+    }
 }
 
 
