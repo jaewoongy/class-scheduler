@@ -273,16 +273,24 @@ function updateAllTables() {
     Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
 }
 
-function removePerson(personName) {
-    // Filter out the person to be removed
-    people = people.filter(person => person.name !== personName);
+function removePerson(index) {
+    if (confirm('Are you sure you want to remove this person?')) {
+        // Update the scheduled hours for all assignments
+        people[index].assignedSlots.forEach(assignment => {
+            if (assignment.type === 'dropIn') {
+                people[index].scheduledDropInHours--;
+            } else if (assignment.type === 'groupTutoring') {
+                people[index].scheduledGroupTutoringHours--;
+            }
+        });
+        
+        // Now safely remove the person from the array
+        people.splice(index, 1);
 
-    // Update UI
-    updateLogPanel();
-    attachSummaryEventListeners();
-    // Any additional UI updates as required
+        // Update the display
+        updateLogPanel();
+    }
 }
-
 function resetLocalStorage() {
     localStorage.removeItem('scheduleState');
     // Optionally clear the titles if needed
@@ -411,29 +419,30 @@ function showDropdown(event, timeslot) {
 
 function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
-    if (person) {
+    if (!person) return;
+
+    // Find the assignment index
+    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
+    if (assignmentIndex !== -1) {
+        // Remove the assignment
+        person.assignedSlots.splice(assignmentIndex, 1);
         if (hourType === 'dropIn') {
             person.scheduledDropInHours--;
         } else {
             person.scheduledGroupTutoringHours--;
         }
-        person.assignedSlots = person.assignedSlots.filter(slot => slot.timeslot !== timeslot);
-        person.availability.push(timeslot);
-
-        // Update UI
-        target.classList.remove('filled-timeslot');
-        target.removeAttribute('data-assigned');
-        target.textContent = 'Available';
-
-        // Update tableAssignments
-        if (tableId) {
-            tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
-        }
-
-        updateLogPanel();
-        attachSummaryEventListeners();
     }
+
+    // Update the UI to reflect the removal
+    target.classList.remove('filled-timeslot');
+    target.textContent = 'Available';
+    delete target.dataset.assigned;
+    delete target.dataset.hourType;
+
+    removeFromTableAssignments(name, timeslot, hourType, tableId);
+    updateLogPanel();
 }
+
 
 
 
@@ -443,43 +452,58 @@ function closeDropdowns() {
 
 function assignPerson(target, name, timeslot, hourType) {
     const person = people.find(p => p.name === name);
-    if (person) {
-        // Identify the table ID from the target element's parents
-        const tableId = findTableId(target);
-
-        // Check if this slot is already assigned to someone else
-        if (target.dataset.assigned && target.dataset.assigned !== name) {
-            // Extract hour type from the existing assignment if necessary
-            let existingHourType = person.assignedSlots.find(slot => slot.timeslot === timeslot)?.type;
-            removeAssignment(target, target.dataset.assigned, timeslot, existingHourType, tableId);
-        }
-
-        // Determine the available hours based on the type
-        let maxHours = hourType === 'dropIn' ? person.maxDropInHours : person.maxGroupTutoringHours;
-        let scheduledHours = hourType === 'dropIn' ? person.scheduledDropInHours : person.scheduledGroupTutoringHours;
-
-        // Assign the new person to the slot if hours are available
-        if (scheduledHours < maxHours) {
-            target.classList.add('filled-timeslot');
-            target.textContent = name;
-            target.dataset.assigned = name;
-            if (hourType === 'dropIn') {
-                person.scheduledDropInHours++;
-            } else {
-                person.scheduledGroupTutoringHours++;
-            }
-            person.assignedSlots.push({ timeslot, type: hourType });
-            person.availability = person.availability.filter(availableTime => availableTime !== timeslot);
-            addToTableAssignments(name, timeslot, hourType, tableId);
-        } else {
-            alert(name + " has reached their maximum " + (hourType === 'dropIn' ? "drop-in" : "group tutoring") + " hours.");
-        }
+    if (!person) {
+        alert('Person not found.');
+        return; // Person must exist in the people array
     }
 
+    const tableId = findTableId(target);
+
+    // If the slot is already assigned, we need to remove the previous person or hour type from the slot
+    if (target.dataset.assigned) {
+        removeAssignment(target, target.dataset.assigned, timeslot, target.dataset.hourType, tableId);
+    }
+
+    // Check if the person has remaining hours for the chosen hour type
+    let remainingHours = hourType === 'dropIn' ? person.dropInHours - person.scheduledDropInHours 
+                                                : person.groupTutoringHours - person.scheduledGroupTutoringHours;
+
+    // If there are no remaining hours for the chosen hour type, alert and return
+    if (remainingHours <= 0) {
+        alert(`${name} has no remaining ${hourType === 'dropIn' ? 'drop-in' : 'group tutoring'} hours.`);
+        return;
+    }
+
+    // Assign the person to the slot
+    target.classList.add('filled-timeslot');
+    target.textContent = name;
+    target.dataset.assigned = name;
+    target.dataset.hourType = hourType;
+
+    // Update the person's scheduled hours
+    if (hourType === 'dropIn') {
+        person.scheduledDropInHours++;
+    } else {
+        person.scheduledGroupTutoringHours++;
+    }
+
+    // Add to the person's assignedSlots array
+    person.assignedSlots.push({ timeslot, type: hourType });
+
+    // Update the tableAssignments
+    addToTableAssignments(name, timeslot, hourType, tableId);
+
+    // Reflect the changes in the UI
     updateLogPanel();
     attachSummaryEventListeners();
 }
 
+function addToTableAssignments(name, timeslot, hourType, tableId) {
+    // Logic to add the assignment to the specific table
+    // This should handle the internal logic of how assignments are stored
+    // For instance, it could look something like this:
+    tableAssignments[tableId].push({ name, timeslot, type: hourType });
+}
 
 
 function findTableId(target) {
@@ -491,17 +515,21 @@ function findTableId(target) {
     return currentElement ? currentElement.id : null;
 }
 
-function addToTableAssignments(name, timeslot, tableId) {
+function addToTableAssignments(name, timeslot, hourType, tableId) {
     if (tableId && tableAssignments[tableId]) {
-        tableAssignments[tableId].push({ name, timeslot });
+        tableAssignments[tableId].push({ name, timeslot, type: hourType });
     }
 }
 
-function removeFromTableAssignments(name, timeslot, tableId) {
-    if (tableId && tableAssignments[tableId]) {
-        tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => !(assignment.name === name && assignment.timeslot === timeslot));
-    }
+function removeFromTableAssignments(name, timeslot, hourType, tableId) {
+    if (!tableId || !tableAssignments[tableId]) return;
+
+    // Filter out the assignment to remove
+    tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
+        return !(assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType);
+    });
 }
+
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
