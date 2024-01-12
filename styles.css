@@ -169,13 +169,14 @@ body {
 
 .person-details {
     transition: max-height 0.3s ease;
-    max-height: 0; /* Start collapsed */
+    max-height: 0;
     overflow: hidden;
 }
 
 .hidden {
-    max-height: 0; /* Ensures that the section is collapsed */
+    max-height: 0;
 }
+
 
 .day-div {
     margin-top: 10px;

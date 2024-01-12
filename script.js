@@ -75,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add null checks for buttons to avoid errors if they don't exist.
     saveButton?.addEventListener('click', function() {
         saveState();
-        alert('Schedule saved!');
     });
 
     resetButton?.addEventListener('click', function() {
@@ -114,6 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateLogPanel();
     attachSummaryEventListeners();
 });
+
 
 document.addEventListener('DOMContentLoaded', updateLogPanel);
 
@@ -195,29 +195,38 @@ function loadState() {
     const savedPeople = localStorage.getItem('people');
     
     if (savedAssignments) {
-        tableAssignments = JSON.parse(savedAssignments); // reassigning is now allowed
+        tableAssignments = JSON.parse(savedAssignments);
         Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
+    } else {
+        alert('No saved table assignments to load.');
     }
 
     if (savedPeople) {
-        people = JSON.parse(savedPeople); // reassigning is now allowed
+        people = JSON.parse(savedPeople);
         resetPeopleState();
         applyLoadedAssignments();
     } else {
-        alert('No saved state to load.');
+        alert('No saved people data to load.');
     }
     
-    updateLogPanel();
+    updateLogPanel(); // Update UI after loading
 }
 
 
 
 function resetPeopleState() {
     people.forEach(person => {
+        person.scheduledHours = 0;
         person.scheduledDropInHours = 0;
         person.scheduledGroupTutoringHours = 0;
         person.assignedSlots = [];
-        person.availability = [...initialAvailability[person.name]];
+
+        if (initialAvailability[person.name]) {
+            person.availability = [...initialAvailability[person.name]];
+        } else {
+            // Handle no initial data as appropriate
+            person.availability = [];
+        }
     });
 }
 
@@ -283,18 +292,8 @@ function updateAllTables() {
     Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
 }
 
-function removePerson(index) {
-    if (confirm('Are you sure you want to remove this person?')) {
-        const person = people[index];
-        person.assignedSlots.forEach(slot => {
-            const tableId = findTableIdForTimeslot(slot.timeslot);
-            removeFromTableAssignments(person.name, slot.timeslot, tableId);
-        });
-        people.splice(index, 1);
-        updateLogPanel();
-        saveState(); // Optionally save the state after removal
-    }
-}
+
+
 
 function resetLocalStorage() {
     localStorage.removeItem('scheduleState');
@@ -426,18 +425,13 @@ function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
     if (!person) return;
 
-    // Check if the person has this specific assignment (timeslot and hour type)
-    const assignmentIndex = person.assignedSlots.findIndex(assignment => 
-        assignment.timeslot === timeslot && assignment.type === hourType);
-
+    // Find and remove the assignment
+    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
     if (assignmentIndex !== -1) {
-        // Remove the assignment
         person.assignedSlots.splice(assignmentIndex, 1);
-
-        // Decrement the appropriate hour type
         if (hourType === 'dropIn') {
             person.scheduledDropInHours--;
-        } else if (hourType === 'groupTutoring') {
+        } else {
             person.scheduledGroupTutoringHours--;
         }
     }
@@ -448,12 +442,11 @@ function removeAssignment(target, name, timeslot, hourType, tableId) {
     delete target.dataset.assigned;
     delete target.dataset.hourType;
 
-    // Update tableAssignments
     removeFromTableAssignments(name, timeslot, hourType, tableId);
-
-    // Update the log panel
-    updateLogPanel();
+    updateLogPanel(); // Ensure this is called to update the UI
+    attachSummaryEventListeners(); // Reattach event listeners
 }
+
 
 
 
@@ -562,24 +555,80 @@ function updateLogPanel() {
         removeButton.onclick = function() {
             removePerson(index);
         };
-
         summaryDiv.appendChild(removeButton);
         personDiv.appendChild(summaryDiv);
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'person-details hidden';
+
+        // Grouping the availability by day of the week
+        const availabilityByDay = groupAvailabilityByDay(person.availability);
+        for (const [day, times] of Object.entries(availabilityByDay)) {
+            const dayDiv = document.createElement('div');
+            const dayLabel = document.createElement('strong');
+            dayLabel.textContent = day + ': ';
+            dayDiv.appendChild(dayLabel);
+
+            const timesText = times.map(time => {
+                // Append AM or PM to the time
+                return convertTo12hTime(time);
+            }).join(', ');
+
+            const timesSpan = document.createElement('span');
+            timesSpan.textContent = timesText;
+            dayDiv.appendChild(timesSpan);
+            detailsDiv.appendChild(dayDiv);
+        }
+
+        personDiv.appendChild(detailsDiv);
         logPanel.appendChild(personDiv);
     });
+
+    attachSummaryEventListeners();
 }
 
 
-function removePerson(index) {
+
+function removePerson(identifier) {
+    let personIndex;
+
+    // Determine if 'identifier' is a number (index) or a string (name)
+    if (typeof identifier === 'number') {
+        personIndex = identifier;
+    } else if (typeof identifier === 'string') {
+        personIndex = people.findIndex(p => p.name === identifier);
+    }
+
+    // Check if the person was found
+    if (personIndex === -1 || personIndex === undefined) {
+        alert('Person not found.');
+        return; // Exit if the person is not found
+    }
+
     if (confirm('Are you sure you want to remove this person?')) {
-        // Remove the person from the array
-        people.splice(index, 1);
+        // Remove assignments from the tables
+        people[personIndex].assignedSlots.forEach(assignment => {
+            // Find the table cell and update UI
+            const tableId = `table${assignment.timeslot.split(' ')[0]}`; // Assuming table ID is derived from the day
+            const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
+            if (cell) {
+                cell.classList.remove('filled-timeslot');
+                cell.textContent = 'Available';
+                delete cell.dataset.assigned;
+                delete cell.dataset.hourType;
+            }
+
+            // Update tableAssignments
+            removeFromTableAssignments(people[personIndex].name, assignment.timeslot, assignment.type, tableId);
+        });
+
+        // Remove the person from the people array
+        people.splice(personIndex, 1);
 
         // Update the display
         updateLogPanel();
     }
 }
-
 
 
 // Call updateLogPanel initially to set up the log panel
@@ -589,75 +638,74 @@ updateLogPanel();
 
 
 function groupAvailabilityByDay(availabilityList) {
-    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    let groupedAvailability = weekDays.reduce((acc, day) => ({ ...acc, [day]: [] }), {});
+    const availabilityByDay = { 'Mon': [], 'Tue': [], 'Wed': [], 'Thu': [], 'Fri': [] };
 
-    availabilityList.forEach(time => {
-        const [day, ...rest] = time.split(' ');
-        if (groupedAvailability[day] !== undefined) {
-            groupedAvailability[day].push(rest.join(' '));
+    availabilityList.forEach(timeSlot => {
+        const [day, time] = timeSlot.split(' ');
+        if (day && time && availabilityByDay.hasOwnProperty(day)) {
+            availabilityByDay[day].push(time);
         }
     });
 
-    // Sorting each day's times in ascending order
-    for (let day of weekDays) {
-        groupedAvailability[day].sort((a, b) => convertTo24hTime(a) - convertTo24hTime(b));
-    }
-
-    return groupedAvailability;
+    return availabilityByDay;
 }
 
 
-
-
-
-function convertTo24hTime(time12h) {
-    const [time, modifier] = time12h.split(' ');
-    let [hours, minutes] = time.split(':');
-    if (hours === '12') {
-        hours = '00';
-    }
-    if (modifier === 'PM') {
-        hours = parseInt(hours, 10) + 12;
-    }
-    return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+function convertTo12hTime(time24h) {
+    const [hours24, minutes] = time24h.split(':');
+    const hours = parseInt(hours24, 10);
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = ((hours + 11) % 12 + 1); // Convert 24h to 12h format
+    return `${hours12}:${minutes} ${suffix}`;
 }
 
 function toggleDetails(event) {
-    const detailsDiv = event.target.nextElementSibling;
-    const isHidden = detailsDiv.classList.toggle('hidden');
-    detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+    const personDiv = event.target.closest('.person-div');
+    const detailsDiv = personDiv.querySelector('.person-details');
+
+    // Force a reflow
+    detailsDiv.offsetHeight;
+
+    if (detailsDiv) {
+        const isHidden = detailsDiv.classList.toggle('hidden');
+
+        // Check if detailsDiv is correctly populated
+        console.log('detailsDiv content:', detailsDiv.innerHTML);
+
+        // Measure the scrollHeight after forcing a reflow
+        const scrollHeight = detailsDiv.scrollHeight;
+        console.log('scrollHeight after reflow:', scrollHeight);
+
+        // Apply the max height with transition
+        detailsDiv.style.maxHeight = isHidden ? '0' : `${scrollHeight}px`;
+    }
 }
 
+
+
+
 function attachSummaryEventListeners() {
+    // Make sure this function correctly toggles the visibility of the detailsDiv
     const summaries = document.querySelectorAll('.person-summary');
     summaries.forEach(summary => {
-        summary.addEventListener('click', toggleDetails);
+        summary.addEventListener('click', function(event) {
+            const detailsDiv = this.parentNode.querySelector('.person-details');
+            const isHidden = detailsDiv.classList.toggle('hidden');
+            detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+        });
     });
 }
+
 
 
 updateLogPanel();
 
 
-function toggleDetails(event) {
-    // Debugging logs
-    console.log("Toggle details function called");
-
-    const personDiv = event.target.closest('.person-div');
-    const detailsDiv = personDiv.querySelector('.person-details');
-    
-    // Debugging logs
-    console.log("personDiv:", personDiv);
-    console.log("detailsDiv:", detailsDiv);
-
-    const isHidden = detailsDiv.classList.toggle('hidden');
-    detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
-}
-
-
 document.getElementById('schedule-info').addEventListener('click', function(event) {
-    if (event.target.classList.contains('person-summary')) {
-        toggleDetails(event);
+    const summaryDiv = event.target.closest('.person-summary');
+    if (summaryDiv) {
+        const detailsDiv = summaryDiv.nextElementSibling;
+        const isHidden = detailsDiv.classList.toggle('hidden');
+        detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
     }
 });
