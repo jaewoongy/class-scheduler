@@ -1,14 +1,14 @@
 // Assuming initialAvailability doesn't need to change
 const initialAvailability = {
-    'Alice': ['Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
+    'Alicent': ['Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
     'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 12:00 PM'],
     // ... other people
 };
 
 let people = [
     {
-        name: 'Alice',
-        availability: [...initialAvailability['Alice']],
+        name: 'Alicent',
+        availability: [...initialAvailability['Alicent']],
         maxDropInHours: 5,
         maxGroupTutoringHours: 5,
         scheduledDropInHours: 0,
@@ -51,24 +51,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveButton = document.getElementById('save-button');
     const resetButton = document.getElementById('reset-button');
     const loadButton = document.getElementById('load-button');
-    
+    const savedPeople = localStorage.getItem('people');
+    if (savedPeople) {
+        people = JSON.parse(savedPeople);
+    }
     
     // Now, add the event listener for handling clicks on .person-summary
-    document.getElementById('schedule-info').addEventListener('click', function(event) {
-        let summaryDiv = event.target.closest('.person-summary');
-        if (summaryDiv) {
-            console.log('Clicked summary for:', summaryDiv.textContent.trim().split(':')[0]);
-            let detailsDiv = summaryDiv.nextElementSibling;
-    
-            // Check if the details are currently visible
+    document.body.addEventListener('click', function(event) {
+        if (event.target.classList.contains('person-summary')) {
+            const detailsDiv = event.target.nextElementSibling;
             const isHidden = detailsDiv.classList.toggle('hidden');
-            if (!isHidden) {
-                // If details are not hidden, expand them
-                detailsDiv.style.maxHeight = detailsDiv.scrollHeight + 'px';
-            } else {
-                // If details are hidden, collapse them
-                detailsDiv.style.maxHeight = '0';
-            }
+            detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
         }
     });
 
@@ -90,33 +83,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    document.querySelectorAll('.person-summary').forEach(function(summary) {
-        summary.addEventListener('click', function() {
-            // Find the next sibling element that is .person-details
-            var details = this.nextElementSibling;
-
-            // Toggle the .hidden class on .person-details
-            if (details.classList.contains('hidden')) {
-                details.classList.remove('hidden');
-                details.style.maxHeight = details.scrollHeight + 'px';
-            } else {
-                details.style.maxHeight = null; // This will reset the max-height
-                details.classList.add('hidden');
-            }
-        });
-    });
-
     const addStudentButton = document.getElementById('add-student-button');
     addStudentButton.addEventListener('click', addStudent);
 
 
     updateLogPanel();
-    attachSummaryEventListeners();
 });
-
-
-document.addEventListener('DOMContentLoaded', updateLogPanel);
-
 
 function addStudent() {
     const studentName = document.getElementById('student-name').value.trim();
@@ -156,6 +128,9 @@ function addStudent() {
         assignedSlots: []
     });
 
+    // Save updated people array to localStorage
+    localStorage.setItem('people', JSON.stringify(people));
+
     // Clear the form for the next input
     document.getElementById('student-name').value = '';
     document.getElementById('drop-in-hours').value = '';
@@ -171,7 +146,6 @@ function addStudent() {
 
 // Be sure to call these functions after you define them
 updateLogPanel();
-attachSummaryEventListeners();
 
 
 
@@ -374,32 +348,41 @@ function showDropdown(event, timeslot) {
 
     // Check if someone is already assigned to this slot and create a "Remove" option
     if (event.target.dataset.assigned) {
+        const assignedName = event.target.dataset.assigned;  // The name of the assigned person
+        const hourType = event.target.dataset.hourType;      // The hour type (dropIn/groupTutoring)
+
         const removeOption = document.createElement('div');
         removeOption.className = 'dropdown-content';
-        removeOption.textContent = `Remove ${event.target.dataset.assigned} (X)`;
+        removeOption.textContent = `Remove ${assignedName} (X)`;
         removeOption.onclick = function() {
-            removeAssignment(event.target, event.target.dataset.assigned, timeslot);
+            // Ensure the hourType is defined before calling removeAssignment
+            if (hourType) {
+                removeAssignment(event.target, assignedName, timeslot, hourType);
+            } else {
+                console.error('Hour type is undefined. Cannot remove assignment.');
+            }
+            closeDropdowns();
         };
         dropdown.appendChild(removeOption);
     }
 
-    // Populate the rest of the dropdown
+    // Populate the rest of the dropdown with available people
     people.forEach(person => {
         if (person.availability.includes(timeslot)) {
-            // Drop In Hours Option
+            // Option for assigning Drop In Hours
             const dropInOption = document.createElement('div');
             dropInOption.className = 'dropdown-content';
-            dropInOption.textContent = person.name + ' - Drop In Hours';
+            dropInOption.textContent = `${person.name} - Drop In Hours`;
             dropInOption.onclick = function() {
                 assignPerson(event.target, person.name, timeslot, 'dropIn');
                 closeDropdowns();
             };
             dropdown.appendChild(dropInOption);
 
-            // Group Tutoring Hours Option
+            // Option for assigning Group Tutoring Hours
             const groupTutoringOption = document.createElement('div');
             groupTutoringOption.className = 'dropdown-content';
-            groupTutoringOption.textContent = person.name + ' - Group Tutoring Hours';
+            groupTutoringOption.textContent = `${person.name} - Group Tutoring Hours`;
             groupTutoringOption.onclick = function() {
                 assignPerson(event.target, person.name, timeslot, 'groupTutoring');
                 closeDropdowns();
@@ -408,6 +391,7 @@ function showDropdown(event, timeslot) {
         }
     });
 
+    // Add a 'No one available' option if the dropdown is empty
     if (dropdown.childElementCount === 0) {
         const noOneAvailable = document.createElement('div');
         noOneAvailable.className = 'dropdown-content';
@@ -421,30 +405,43 @@ function showDropdown(event, timeslot) {
 }
 
 
+
 function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
-    if (!person) return;
-
-    // Find and remove the assignment
-    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
-    if (assignmentIndex !== -1) {
-        person.assignedSlots.splice(assignmentIndex, 1);
-        if (hourType === 'dropIn') {
-            person.scheduledDropInHours--;
-        } else {
-            person.scheduledGroupTutoringHours--;
-        }
+    if (!person) {
+        console.error('Person not found.');
+        return;
     }
 
-    // Update the UI
+    // Find the assignment index and type
+    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
+
+    if (assignmentIndex !== -1) {
+        // Remove the assignment
+        person.assignedSlots.splice(assignmentIndex, 1);
+
+        // Adjust the person's scheduled hours based on hour type
+        if (hourType === 'dropIn') {
+            person.scheduledDropInHours--;
+        } else if (hourType === 'groupTutoring') {
+            person.scheduledGroupTutoringHours--;
+        }
+    } else {
+        console.error('Assignment not found.');
+        return;
+    }
+
+    // Update the UI for the timeslot
     target.classList.remove('filled-timeslot');
     target.textContent = 'Available';
     delete target.dataset.assigned;
     delete target.dataset.hourType;
 
+    // Update table assignments
     removeFromTableAssignments(name, timeslot, hourType, tableId);
-    updateLogPanel(); // Ensure this is called to update the UI
-    attachSummaryEventListeners(); // Reattach event listeners
+
+    // Refresh the display
+    updateLogPanel();
 }
 
 
@@ -486,7 +483,8 @@ function assignPerson(target, name, timeslot, hourType) {
     target.classList.add('filled-timeslot');
     target.textContent = name;
     target.dataset.assigned = name;
-    target.dataset.hourType = hourType;
+    target.dataset.hourType = hourType; // Set hour type as a data attribute
+
 
     // Update the person's scheduled hours
     if (hourType === 'dropIn') {
@@ -503,7 +501,6 @@ function assignPerson(target, name, timeslot, hourType) {
 
     // Reflect the changes in the UI
     updateLogPanel();
-    attachSummaryEventListeners();
 }
 
 function addToTableAssignments(name, timeslot, hourType, tableId) {
@@ -530,9 +527,10 @@ function addToTableAssignments(name, timeslot, hourType, tableId) {
 }
 
 function removeFromTableAssignments(name, timeslot, hourType, tableId) {
-    if (tableId && tableAssignments[tableId]) {
-        tableAssignments[tableId] = tableAssignments[tableId].filter(assignment =>
-            !(assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType));
+    if (tableAssignments[tableId]) {
+        tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
+            return assignment.name !== name || assignment.timeslot !== timeslot || assignment.type !== hourType;
+        });
     }
 }
 
@@ -583,8 +581,6 @@ function updateLogPanel() {
         personDiv.appendChild(detailsDiv);
         logPanel.appendChild(personDiv);
     });
-
-    attachSummaryEventListeners();
 }
 
 
@@ -659,53 +655,14 @@ function convertTo12hTime(time24h) {
     return `${hours12}:${minutes} ${suffix}`;
 }
 
-function toggleDetails(event) {
-    const personDiv = event.target.closest('.person-div');
-    const detailsDiv = personDiv.querySelector('.person-details');
-
-    // Force a reflow
-    detailsDiv.offsetHeight;
-
-    if (detailsDiv) {
-        const isHidden = detailsDiv.classList.toggle('hidden');
-
-        // Check if detailsDiv is correctly populated
-        console.log('detailsDiv content:', detailsDiv.innerHTML);
-
-        // Measure the scrollHeight after forcing a reflow
-        const scrollHeight = detailsDiv.scrollHeight;
-        console.log('scrollHeight after reflow:', scrollHeight);
-
-        // Apply the max height with transition
-        detailsDiv.style.maxHeight = isHidden ? '0' : `${scrollHeight}px`;
-    }
-}
-
-
-
-
-function attachSummaryEventListeners() {
-    // Make sure this function correctly toggles the visibility of the detailsDiv
-    const summaries = document.querySelectorAll('.person-summary');
-    summaries.forEach(summary => {
-        summary.addEventListener('click', function(event) {
-            const detailsDiv = this.parentNode.querySelector('.person-details');
-            const isHidden = detailsDiv.classList.toggle('hidden');
-            detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
-        });
-    });
-}
-
-
-
-updateLogPanel();
-
-
-document.getElementById('schedule-info').addEventListener('click', function(event) {
-    const summaryDiv = event.target.closest('.person-summary');
-    if (summaryDiv) {
-        const detailsDiv = summaryDiv.nextElementSibling;
+document.body.addEventListener('click', function(event) {
+    // Check if the clicked element has the class 'person-summary'
+    if (event.target.classList.contains('person-summary')) {
+        const detailsDiv = event.target.nextElementSibling;
         const isHidden = detailsDiv.classList.toggle('hidden');
         detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
     }
 });
+
+
+updateLogPanel();
