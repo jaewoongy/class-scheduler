@@ -228,11 +228,20 @@ function applyLoadedAssignments() {
 }
 
 function resetSchedule() {
-    resetPeopleState(); // Resets people to their initial state
+    // Reset the table assignments to empty arrays
     Object.keys(tableAssignments).forEach(tableId => {
         tableAssignments[tableId] = [];
-        updateTable(tableId);
     });
+
+    // Reset the scheduled hours without touching the availability
+    people.forEach(person => {
+        person.scheduledDropInHours = 0;
+        person.scheduledGroupTutoringHours = 0;
+        person.assignedSlots = [];
+    });
+
+    // Update the UI to reflect these changes
+    updateAllTables();
     updateLogPanel();
 }
 
