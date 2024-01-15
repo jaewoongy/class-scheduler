@@ -1,9 +1,10 @@
 // Assuming initialAvailability doesn't need to change
 const initialAvailability = {
     'Alicent': ['Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
-    'Bob': ['Mon 10:00 AM', 'Wed 12:00 PM', 'Thu 12:00 PM'],
+    'Bob': ['Mon 10:00 AM', 'Mon 3:00 PM', 'Wed 12:00 PM', 'Thu 12:00 PM'],
     // ... other people
 };
+
 
 let people = [
     {
@@ -26,7 +27,6 @@ let people = [
     },
     // ... other people
 ];
-
 
 // Object to track assignments per table
 let tableAssignments = {
@@ -55,15 +55,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedPeople) {
         people = JSON.parse(savedPeople);
     }
-    
-    // Now, add the event listener for handling clicks on .person-summary
-    document.body.addEventListener('click', function(event) {
-        if (event.target.classList.contains('person-summary')) {
-            const detailsDiv = event.target.nextElementSibling;
-            const isHidden = detailsDiv.classList.toggle('hidden');
-            detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
-        }
-    });
 
     // Add null checks for buttons to avoid errors if they don't exist.
     saveButton?.addEventListener('click', function() {
@@ -143,34 +134,46 @@ function addStudent() {
     updateLogPanel(); // Function to update the display of the schedule
 }
 
-
 // Be sure to call these functions after you define them
 updateLogPanel();
-
-
 
 
 function resetForm() {
     document.getElementById('student-name').value = '';
     document.getElementById('student-availability').selectedIndex = 0;
 }
-
 function saveState() {
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
     localStorage.setItem('people', JSON.stringify(people));
     alert('Schedule saved!');
     updateLogPanel();
 }
-
-
-
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     const savedPeople = localStorage.getItem('people');
     
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
-        Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
+
+        // Iterate over each table in tableAssignments
+        Object.keys(tableAssignments).forEach(tableId => {
+            const assignments = tableAssignments[tableId];
+
+            // Iterate over each assignment in this table
+            assignments.forEach(assignment => {
+                // Logic to find the correct cell based on assignment
+                // Example: find the cell in tableId with the timeslot of assignment.timeslot
+                const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
+                if (cell) {
+                    cell.dataset.hourType = assignment.type;  // Use assignment.type for hourType
+                    cell.textContent = assignment.name;      // Update cell text to show assigned name
+                    cell.classList.add('filled-timeslot');   // Add any styling class if needed
+                }
+            });
+
+            // Update the table display
+            updateTable(tableId);
+        });
     } else {
         alert('No saved table assignments to load.');
     }
@@ -185,7 +188,6 @@ function loadState() {
     
     updateLogPanel(); // Update UI after loading
 }
-
 
 
 function resetPeopleState() {
@@ -225,10 +227,6 @@ function applyLoadedAssignments() {
     });
 }
 
-
-
-
-
 function resetSchedule() {
     resetPeopleState(); // Resets people to their initial state
     Object.keys(tableAssignments).forEach(tableId => {
@@ -237,7 +235,6 @@ function resetSchedule() {
     });
     updateLogPanel();
 }
-
 
 function updateTable(tableId) {
     const table = document.getElementById(tableId);
@@ -260,14 +257,10 @@ function updateTable(tableId) {
     });
 }
 
-
 // Update All Tables Function
 function updateAllTables() {
     Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
 }
-
-
-
 
 function resetLocalStorage() {
     localStorage.removeItem('scheduleState');
@@ -277,13 +270,11 @@ function resetLocalStorage() {
     // }
 }
 
-
 window.addEventListener('click', function(event) {
     if (!event.target.matches('.dropdown-content')) {
         closeDropdowns();
     }
 });
-
 
 function createTable(buildingNumber) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -308,8 +299,16 @@ function createTable(buildingNumber) {
     for (let hour = 10; hour <= 20; hour++) {
         const row = tbody.insertRow();
         const timeCell = document.createElement('td');
-        const formattedHour = hour > 12 ? hour - 12 : hour;
-        const amPm = hour >= 12 ? 'PM' : 'AM';
+        let formattedHour = hour;
+        let amPm = 'AM';
+        
+        if (hour > 12) {
+            formattedHour = hour - 12;
+            amPm = 'PM';
+        } else if (hour === 12) { // When it's 12 PM, no need to subtract 12
+            amPm = 'PM';
+        }
+        
         timeCell.textContent = `${formattedHour}:00 ${amPm}`;
         row.appendChild(timeCell);
 
@@ -349,8 +348,12 @@ function showDropdown(event, timeslot) {
     // Check if someone is already assigned to this slot and create a "Remove" option
     if (event.target.dataset.assigned) {
         const assignedName = event.target.dataset.assigned;  // The name of the assigned person
-        const hourType = event.target.dataset.hourType;      // The hour type (dropIn/groupTutoring)
-
+        const hourType = event.target.dataset.hourType;
+        if (!hourType) {
+            console.error("Hour type data attribute is missing on the target element.");
+            return;
+        }
+    
         const removeOption = document.createElement('div');
         removeOption.className = 'dropdown-content';
         removeOption.textContent = `Remove ${assignedName} (X)`;
@@ -404,8 +407,6 @@ function showDropdown(event, timeslot) {
     event.stopPropagation();
 }
 
-
-
 function removeAssignment(target, name, timeslot, hourType, tableId) {
     const person = people.find(p => p.name === name);
     if (!person) {
@@ -443,10 +444,6 @@ function removeAssignment(target, name, timeslot, hourType, tableId) {
     // Refresh the display
     updateLogPanel();
 }
-
-
-
-
 
 function closeDropdowns() {
     document.querySelectorAll('.dropdown').forEach(dropdown => dropdown.remove());
@@ -510,7 +507,6 @@ function addToTableAssignments(name, timeslot, hourType, tableId) {
     tableAssignments[tableId].push({ name, timeslot, type: hourType });
 }
 
-
 function findTableId(target) {
     // Traverse up the DOM tree to find the parent table and return its ID
     let currentElement = target;
@@ -533,7 +529,6 @@ function removeFromTableAssignments(name, timeslot, hourType, tableId) {
         });
     }
 }
-
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
@@ -559,7 +554,6 @@ function updateLogPanel() {
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'person-details hidden';
 
-        // Grouping the availability by day of the week
         const availabilityByDay = groupAvailabilityByDay(person.availability);
         for (const [day, times] of Object.entries(availabilityByDay)) {
             const dayDiv = document.createElement('div');
@@ -567,10 +561,7 @@ function updateLogPanel() {
             dayLabel.textContent = day + ': ';
             dayDiv.appendChild(dayLabel);
 
-            const timesText = times.map(time => {
-                // Append AM or PM to the time
-                return convertTo12hTime(time);
-            }).join(', ');
+            const timesText = times.join(', '); // Directly join the times without conversion
 
             const timesSpan = document.createElement('span');
             timesSpan.textContent = timesText;
@@ -583,6 +574,8 @@ function updateLogPanel() {
     });
 }
 
+// Call this function to update the log panel
+updateLogPanel();
 
 
 function removePerson(identifier) {
@@ -626,19 +619,16 @@ function removePerson(identifier) {
     }
 }
 
-
 // Call updateLogPanel initially to set up the log panel
 updateLogPanel();
-
-
-
 
 function groupAvailabilityByDay(availabilityList) {
     const availabilityByDay = { 'Mon': [], 'Tue': [], 'Wed': [], 'Thu': [], 'Fri': [] };
 
     availabilityList.forEach(timeSlot => {
-        const [day, time] = timeSlot.split(' ');
-        if (day && time && availabilityByDay.hasOwnProperty(day)) {
+        const [day, ...timeParts] = timeSlot.split(' ');
+        if (day && timeParts.length > 0 && availabilityByDay.hasOwnProperty(day)) {
+            const time = timeParts.join(' '); // Reconstruct the time with AM/PM
             availabilityByDay[day].push(time);
         }
     });
@@ -648,21 +638,35 @@ function groupAvailabilityByDay(availabilityList) {
 
 
 function convertTo12hTime(time24h) {
-    const [hours24, minutes] = time24h.split(':');
-    const hours = parseInt(hours24, 10);
-    const suffix = hours >= 12 ? 'PM' : 'AM';
-    const hours12 = ((hours + 11) % 12 + 1); // Convert 24h to 12h format
-    return `${hours12}:${minutes} ${suffix}`;
+    let [hours, minutes] = time24h.split(':');
+    hours = parseInt(hours, 10);
+    let suffix = 'AM';
+
+    if (hours >= 12) {
+        suffix = 'PM';
+        if (hours > 12) {
+            hours -= 12;
+        }
+    } else if (hours === 0) {
+        hours = 12;
+    }
+    // Ensure two digits for minutes
+    minutes = minutes.padStart(2, '0');
+
+    return `${hours}:${minutes} ${suffix}`;
 }
+
 
 document.body.addEventListener('click', function(event) {
     // Check if the clicked element has the class 'person-summary'
     if (event.target.classList.contains('person-summary')) {
         const detailsDiv = event.target.nextElementSibling;
-        const isHidden = detailsDiv.classList.toggle('hidden');
-        detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+        
+        if (detailsDiv && detailsDiv.classList.contains('person-details')) {
+            const isHidden = detailsDiv.classList.toggle('hidden');
+            detailsDiv.style.maxHeight = isHidden ? '0' : `${detailsDiv.scrollHeight}px`;
+        }
     }
 });
-
 
 updateLogPanel();
