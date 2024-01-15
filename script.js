@@ -143,24 +143,52 @@ function resetForm() {
     document.getElementById('student-availability').selectedIndex = 0;
 }
 function saveState() {
+    // Iterate through all table assignments and ensure each has a tableId
+    Object.keys(tableAssignments).forEach(tableId => {
+        // Assign the tableId to each assignment in this table
+        tableAssignments[tableId] = tableAssignments[tableId].map(assignment => {
+            return { ...assignment, tableId }; // Ensure tableId is included
+        });
+    });
+
+    // Save the assignments to localStorage
     localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
     localStorage.setItem('people', JSON.stringify(people));
     alert('Schedule saved!');
     updateLogPanel();
 }
+
+
+
+
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     const savedPeople = localStorage.getItem('people');
     
+
+    Object.values(tableAssignments).forEach(assignments => {
+        assignments.forEach(assignment => {
+            console.log('Loaded assignment:', assignment);
+            // Make sure that 'name' and other properties are defined
+            if (!assignment.name || !assignment.timeslot || !assignment.type) {
+                console.error('Invalid assignment structure:', assignment);
+            }
+        });
+    });
+
+
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
 
         // Iterate over each table in tableAssignments
         Object.keys(tableAssignments).forEach(tableId => {
-            const assignments = tableAssignments[tableId];
-
             // Iterate over each assignment in this table
-            assignments.forEach(assignment => {
+            tableAssignments[tableId].forEach(assignment => {
+                if (!assignment.tableId) {
+                    console.error('Loaded assignment missing tableId:', assignment);
+                    // If tableId is missing, handle appropriately
+                }
+                
                 // Logic to find the correct cell based on assignment
                 // Example: find the cell in tableId with the timeslot of assignment.timeslot
                 const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
@@ -207,43 +235,62 @@ function resetPeopleState() {
 }
 
 function applyLoadedAssignments() {
-    Object.values(tableAssignments).forEach(assignments => {
-        assignments.forEach(assignment => {
+    // Clear existing assigned slots for each person
+    people.forEach(person => person.assignedSlots = []);
+
+    // Iterate over each table's assignments and apply them
+    Object.keys(tableAssignments).forEach(tableId => {
+        tableAssignments[tableId].forEach(assignment => {
             const person = people.find(p => p.name === assignment.name);
             if (person) {
-                const hourType = assignment.type;
-                if (hourType === 'dropIn') {
+                // Add the assignment to the person's list of assigned slots
+                person.assignedSlots.push({
+                    timeslot: assignment.timeslot,
+                    type: assignment.type,
+                    tableId: tableId // Ensure this is provided when saving the assignment
+                });
+
+                // Update the person's scheduled hours based on the type of hour
+                if (assignment.type === 'dropIn') {
                     person.scheduledDropInHours++;
                 } else {
                     person.scheduledGroupTutoringHours++;
                 }
-                person.assignedSlots.push(assignment);
+
+                // Optionally, remove the timeslot from the person's availability
                 const availabilityIndex = person.availability.indexOf(assignment.timeslot);
                 if (availabilityIndex !== -1) {
                     person.availability.splice(availabilityIndex, 1);
                 }
+            } else {
+                // Handle the case where the person is not found in the people array
+                console.warn('Person not found for assignment:', assignment);
             }
         });
     });
+
+    // Update the UI to reflect the loaded assignments
+    updateLogPanel();
 }
 
 function resetSchedule() {
-    // Reset the table assignments to empty arrays
+    // Clear table assignments
     Object.keys(tableAssignments).forEach(tableId => {
         tableAssignments[tableId] = [];
     });
 
-    // Reset the scheduled hours without touching the availability
+    // Reset scheduled hours and slots for each person without touching availability
     people.forEach(person => {
         person.scheduledDropInHours = 0;
         person.scheduledGroupTutoringHours = 0;
-        person.assignedSlots = [];
+        person.assignedSlots = []; // Reset assigned slots
     });
 
-    // Update the UI to reflect these changes
+    // Update UI
     updateAllTables();
     updateLogPanel();
 }
+
 
 function updateTable(tableId) {
     const table = document.getElementById(tableId);
@@ -265,6 +312,7 @@ function updateTable(tableId) {
         }
     });
 }
+
 
 // Update All Tables Function
 function updateAllTables() {
@@ -416,42 +464,44 @@ function showDropdown(event, timeslot) {
     event.stopPropagation();
 }
 
-function removeAssignment(target, name, timeslot, hourType, tableId) {
+function removeAssignment(target, name, timeslot, hourType) {
+    console.log("Attempting to remove assignment:", { name, timeslot, hourType });
+    const tableId = findTableId(target);
+    if (!tableId) {
+        console.error('Table ID is undefined, cannot remove assignment:', { name, timeslot, hourType });
+        return;
+    }
+
+    console.log("Attempting to remove assignment:", { name, timeslot, hourType, tableId });
     const person = people.find(p => p.name === name);
     if (!person) {
-        console.error('Person not found.');
+        console.error('Person not found:', name);
         return;
     }
 
-    // Find the assignment index and type
-    const assignmentIndex = person.assignedSlots.findIndex(assignment => assignment.timeslot === timeslot && assignment.type === hourType);
+    console.log("Current assignedSlots for person:", person.assignedSlots);
+
+    const assignmentIndex = person.assignedSlots.findIndex(assignment =>
+        assignment.timeslot === timeslot && assignment.type === hourType && assignment.tableId === tableId
+    );
 
     if (assignmentIndex !== -1) {
-        // Remove the assignment
-        person.assignedSlots.splice(assignmentIndex, 1);
-
-        // Adjust the person's scheduled hours based on hour type
+        // Decrement the appropriate hours
         if (hourType === 'dropIn') {
-            person.scheduledDropInHours--;
+            person.scheduledDropInHours = Math.max(person.scheduledDropInHours - 1, 0);
         } else if (hourType === 'groupTutoring') {
-            person.scheduledGroupTutoringHours--;
+            person.scheduledGroupTutoringHours = Math.max(person.scheduledGroupTutoringHours - 1, 0);
         }
+
+        person.assignedSlots.splice(assignmentIndex, 1);
+        removeFromTableAssignments(name, timeslot, hourType, tableId);
+        console.log(`Assignment for ${name} at ${timeslot} removed.`);
+        updateTable(tableId);
+        updateLogPanel(); // Call updateLogPanel to reflect the changes
     } else {
-        console.error('Assignment not found.');
-        return;
+        console.error('Assignment not found:', { name, timeslot, hourType, tableId });
+        console.log('Full assignment data:', person.assignedSlots);
     }
-
-    // Update the UI for the timeslot
-    target.classList.remove('filled-timeslot');
-    target.textContent = 'Available';
-    delete target.dataset.assigned;
-    delete target.dataset.hourType;
-
-    // Update table assignments
-    removeFromTableAssignments(name, timeslot, hourType, tableId);
-
-    // Refresh the display
-    updateLogPanel();
 }
 
 function closeDropdowns() {
@@ -465,7 +515,16 @@ function assignPerson(target, name, timeslot, hourType) {
         return; // Person must exist in the people array
     }
 
+    if (!name || !timeslot || !hourType) {
+        console.error('Cannot assign person with undefined values:', { name, timeslot, hourType });
+        return;
+    }
+
     const tableId = findTableId(target);
+    if (!tableId) {
+        console.error('Table ID is undefined, cannot assign person:', { name, timeslot, hourType });
+        return;
+    }
 
     // If the slot is already assigned, we need to remove the previous person or hour type from the slot
     if (target.dataset.assigned) {
@@ -500,7 +559,7 @@ function assignPerson(target, name, timeslot, hourType) {
     }
 
     // Add to the person's assignedSlots array
-    person.assignedSlots.push({ timeslot, type: hourType });
+    person.assignedSlots.push({ name, timeslot, type: hourType, tableId });
 
     // Update the tableAssignments
     addToTableAssignments(name, timeslot, hourType, tableId);
@@ -509,35 +568,44 @@ function assignPerson(target, name, timeslot, hourType) {
     updateLogPanel();
 }
 
-function addToTableAssignments(name, timeslot, hourType, tableId) {
-    // Logic to add the assignment to the specific table
-    // This should handle the internal logic of how assignments are stored
-    // For instance, it could look something like this:
-    tableAssignments[tableId].push({ name, timeslot, type: hourType });
-}
-
-function findTableId(target) {
-    // Traverse up the DOM tree to find the parent table and return its ID
-    let currentElement = target;
-    while (currentElement && !currentElement.classList.contains('schedule-table')) {
-        currentElement = currentElement.parentElement;
+function findTableId(element) {
+    while (element && !element.matches('.schedule-table')) {
+        element = element.parentElement;
     }
-    return currentElement ? currentElement.id : null;
+    return element ? element.id : undefined;
 }
 
+
+
 function addToTableAssignments(name, timeslot, hourType, tableId) {
-    if (tableId && tableAssignments[tableId]) {
+    if (!tableId || !tableAssignments[tableId]) {
+        console.error('Cannot add to tableAssignments. Invalid tableId:', tableId);
+        return;
+    }
+
+    const existingAssignmentIndex = tableAssignments[tableId].findIndex(assignment =>
+        assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType
+    );
+
+    if (existingAssignmentIndex === -1) {
         tableAssignments[tableId].push({ name, timeslot, type: hourType });
+    } else {
+        console.error('Assignment already exists:', { name, timeslot, hourType, tableId });
     }
 }
+
+
 
 function removeFromTableAssignments(name, timeslot, hourType, tableId) {
     if (tableAssignments[tableId]) {
         tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
-            return assignment.name !== name || assignment.timeslot !== timeslot || assignment.type !== hourType;
+            return !(assignment.name === name && assignment.timeslot === timeslot && assignment.type === hourType);
         });
+    } else {
+        console.error('Failed to find table assignments for tableId:', tableId);
     }
 }
+
 
 function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
