@@ -164,33 +164,15 @@ function saveState() {
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     const savedPeople = localStorage.getItem('people');
-    
-
-    Object.values(tableAssignments).forEach(assignments => {
-        assignments.forEach(assignment => {
-            console.log('Loaded assignment:', assignment);
-            // Make sure that 'name' and other properties are defined
-            if (!assignment.name || !assignment.timeslot || !assignment.type) {
-                console.error('Invalid assignment structure:', assignment);
-            }
-        });
-    });
-
 
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
 
         // Iterate over each table in tableAssignments
         Object.keys(tableAssignments).forEach(tableId => {
-            // Iterate over each assignment in this table
+            // Update each assignment in this table
             tableAssignments[tableId].forEach(assignment => {
-                if (!assignment.tableId) {
-                    console.error('Loaded assignment missing tableId:', assignment);
-                    // If tableId is missing, handle appropriately
-                }
-                
-                // Logic to find the correct cell based on assignment
-                // Example: find the cell in tableId with the timeslot of assignment.timeslot
+                // Logic to find the correct cell and update it
                 const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
                 if (cell) {
                     cell.dataset.hourType = assignment.type;  // Use assignment.type for hourType
@@ -208,14 +190,31 @@ function loadState() {
 
     if (savedPeople) {
         people = JSON.parse(savedPeople);
-        resetPeopleState();
-        applyLoadedAssignments();
+
+        // Reset the availability for each person based on the loaded data
+        people.forEach(person => {
+            if (initialAvailability[person.name]) {
+                person.availability = [...initialAvailability[person.name]];
+            } else {
+                person.availability = [];
+            }
+
+            // Remove timeslots from availability that are already assigned
+            person.assignedSlots.forEach(assignment => {
+                const index = person.availability.indexOf(assignment.timeslot);
+                if (index !== -1) {
+                    person.availability.splice(index, 1);
+                }
+            });
+        });
+
+        // Update the log panel to reflect the loaded state
+        updateLogPanel();
     } else {
         alert('No saved people data to load.');
     }
-    
-    updateLogPanel(); // Update UI after loading
 }
+
 
 
 function resetPeopleState() {
@@ -466,13 +465,14 @@ function showDropdown(event, timeslot) {
 
 function removeAssignment(target, name, timeslot, hourType) {
     console.log("Attempting to remove assignment:", { name, timeslot, hourType });
+
+    // Declare tableId once at the beginning
     const tableId = findTableId(target);
     if (!tableId) {
         console.error('Table ID is undefined, cannot remove assignment:', { name, timeslot, hourType });
         return;
     }
 
-    console.log("Attempting to remove assignment:", { name, timeslot, hourType, tableId });
     const person = people.find(p => p.name === name);
     if (!person) {
         console.error('Person not found:', name);
@@ -494,6 +494,12 @@ function removeAssignment(target, name, timeslot, hourType) {
         }
 
         person.assignedSlots.splice(assignmentIndex, 1);
+
+        // Only add the timeslot back to the person's availability if it's not already there
+        if (!person.availability.includes(timeslot)) {
+            person.availability.push(timeslot);
+        }
+
         removeFromTableAssignments(name, timeslot, hourType, tableId);
         console.log(`Assignment for ${name} at ${timeslot} removed.`);
         updateTable(tableId);
@@ -502,7 +508,14 @@ function removeAssignment(target, name, timeslot, hourType) {
         console.error('Assignment not found:', { name, timeslot, hourType, tableId });
         console.log('Full assignment data:', person.assignedSlots);
     }
+
+    // Ensure the log panel is updated regardless of whether an assignment was found
+    updateLogPanel();
 }
+
+    
+    
+
 
 function closeDropdowns() {
     document.querySelectorAll('.dropdown').forEach(dropdown => dropdown.remove());
@@ -513,6 +526,13 @@ function assignPerson(target, name, timeslot, hourType) {
     if (!person) {
         alert('Person not found.');
         return; // Person must exist in the people array
+    }
+
+    if (person) {
+        const timeslotIndex = person.availability.indexOf(timeslot);
+        if (timeslotIndex !== -1) {
+            person.availability.splice(timeslotIndex, 1);
+        }
     }
 
     if (!name || !timeslot || !hourType) {
@@ -611,7 +631,7 @@ function updateLogPanel() {
     const logPanel = document.getElementById('schedule-info');
     logPanel.innerHTML = ''; // Clear existing content
 
-    people.forEach((person, index) => {
+    people.forEach(person => {
         const personDiv = document.createElement('div');
         personDiv.className = 'person-div';
 
@@ -623,33 +643,34 @@ function updateLogPanel() {
         removeButton.textContent = 'X';
         removeButton.className = 'remove-button';
         removeButton.onclick = function() {
-            removePerson(index);
+            removePerson(person.name); // Assuming removePerson uses the name to remove
         };
         summaryDiv.appendChild(removeButton);
         personDiv.appendChild(summaryDiv);
-
+    
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'person-details hidden';
-
+    
         const availabilityByDay = groupAvailabilityByDay(person.availability);
         for (const [day, times] of Object.entries(availabilityByDay)) {
             const dayDiv = document.createElement('div');
+            dayDiv.className = 'day-div';
             const dayLabel = document.createElement('strong');
             dayLabel.textContent = day + ': ';
             dayDiv.appendChild(dayLabel);
-
-            const timesText = times.join(', '); // Directly join the times without conversion
-
+    
             const timesSpan = document.createElement('span');
-            timesSpan.textContent = timesText;
+            timesSpan.textContent = times.join(', ');
             dayDiv.appendChild(timesSpan);
+    
             detailsDiv.appendChild(dayDiv);
         }
-
+    
         personDiv.appendChild(detailsDiv);
         logPanel.appendChild(personDiv);
     });
-}
+}    
+
 
 // Call this function to update the log panel
 updateLogPanel();
