@@ -1,21 +1,18 @@
 // Assuming initialAvailability doesn't need to change
 const initialAvailability = {
-    'Alicent': ['Mon 10:00 AM', 'Mon 11:00 AM', 'Mon 12:00 PM', 'Mon 1:00 PM', 'Mon 2:00 PM', 'Mon 3:00 PM', 'Mon 4:00 PM', 'Mon 5:00 PM', 'Mon 6:00 PM', 'Mon 7:00 PM', 'Mon 8:00 PM'],
     'Bob': ['Mon 10:00 AM', 'Mon 3:00 PM', 'Wed 12:00 PM', 'Thu 12:00 PM'],
     // ... other people
 };
 
+let allInitialAvailabilities = {};
+
+// Load initial availabilities from localStorage if available
+const savedAllInitialAvailabilities = localStorage.getItem('allInitialAvailabilities');
+if (savedAllInitialAvailabilities) {
+    allInitialAvailabilities = JSON.parse(savedAllInitialAvailabilities);
+}
 
 let people = [
-    {
-        name: 'Alicent',
-        availability: [...initialAvailability['Alicent']],
-        maxDropInHours: 5,
-        maxGroupTutoringHours: 5,
-        scheduledDropInHours: 0,
-        scheduledGroupTutoringHours: 0,
-        assignedSlots: []
-    },
     {
         name: 'Bob',
         availability: [...initialAvailability['Bob']],
@@ -37,6 +34,8 @@ let tableAssignments = {
     table5: [],
     table6: []
 };
+
+
 
 document.addEventListener('DOMContentLoaded', function() {
     const scheduleContainer = document.getElementById('schedule-container');
@@ -94,7 +93,7 @@ function addStudent() {
         return;
     }
 
-    // Ensure the availability select elements are named correctly and exist
+    // Gather availability from select elements
     const availability = [
         ...document.getElementById('student-availability-monday').selectedOptions,
         ...document.getElementById('student-availability-tuesday').selectedOptions,
@@ -119,8 +118,12 @@ function addStudent() {
         assignedSlots: []
     });
 
-    // Save updated people array to localStorage
+    // Update allInitialAvailabilities with the new student's initial availability
+    allInitialAvailabilities[studentName] = [...availability];
+
+    // Save updated people array and allInitialAvailabilities to localStorage
     localStorage.setItem('people', JSON.stringify(people));
+    localStorage.setItem('allInitialAvailabilities', JSON.stringify(allInitialAvailabilities));
 
     // Clear the form for the next input
     document.getElementById('student-name').value = '';
@@ -133,6 +136,8 @@ function addStudent() {
     alert('Student added!');
     updateLogPanel(); // Function to update the display of the schedule
 }
+
+
 
 // Be sure to call these functions after you define them
 updateLogPanel();
@@ -158,63 +163,60 @@ function saveState() {
     updateLogPanel();
 }
 
-
-
-
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     const savedPeople = localStorage.getItem('people');
+    const savedAllInitialAvailabilities = localStorage.getItem('allInitialAvailabilities');
 
+    // Load initial availabilities if available
+    if (savedAllInitialAvailabilities) {
+        allInitialAvailabilities = JSON.parse(savedAllInitialAvailabilities);
+    } else {
+        allInitialAvailabilities = {...initialAvailability}; // Fallback to initialAvailability
+    }
+
+    // Load and update table assignments
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
-
-        // Iterate over each table in tableAssignments
         Object.keys(tableAssignments).forEach(tableId => {
-            // Update each assignment in this table
             tableAssignments[tableId].forEach(assignment => {
-                // Logic to find the correct cell and update it
                 const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
                 if (cell) {
-                    cell.dataset.hourType = assignment.type;  // Use assignment.type for hourType
-                    cell.textContent = assignment.name;      // Update cell text to show assigned name
-                    cell.classList.add('filled-timeslot');   // Add any styling class if needed
+                    cell.dataset.hourType = assignment.type; 
+                    cell.textContent = assignment.name;
+                    cell.classList.add('filled-timeslot');
                 }
             });
-
-            // Update the table display
             updateTable(tableId);
         });
     } else {
         alert('No saved table assignments to load.');
     }
 
+
+    console.log("Loaded allInitialAvailabilities:", allInitialAvailabilities);
+
+    // Load and update people's availability
     if (savedPeople) {
         people = JSON.parse(savedPeople);
 
-        // Reset the availability for each person based on the loaded data
+        // Reset and reconstruct availability for each person
         people.forEach(person => {
-            if (initialAvailability[person.name]) {
-                person.availability = [...initialAvailability[person.name]];
-            } else {
-                person.availability = [];
-            }
-
-            // Remove timeslots from availability that are already assigned
-            person.assignedSlots.forEach(assignment => {
-                const index = person.availability.indexOf(assignment.timeslot);
-                if (index !== -1) {
-                    person.availability.splice(index, 1);
-                }
+            let personInitialAvailability = allInitialAvailabilities[person.name] || [];
+            person.availability = personInitialAvailability.filter(timeSlot => {
+                // Check if the timeslot is not in the assigned slots
+                return !Object.values(tableAssignments).flat().some(assignment => 
+                    assignment.name === person.name && assignment.timeslot === timeSlot);
             });
+
+            console.log(`Availability for ${person.name}:`, person.availability);
         });
 
-        // Update the log panel to reflect the loaded state
         updateLogPanel();
     } else {
         alert('No saved people data to load.');
     }
 }
-
 
 
 function resetPeopleState() {
