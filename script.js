@@ -275,22 +275,32 @@ function applyLoadedAssignments() {
 }
 
 function resetSchedule() {
-    // Clear table assignments
+    // Clear table assignments in memory but don't save to localStorage
     Object.keys(tableAssignments).forEach(tableId => {
         tableAssignments[tableId] = [];
+        updateTable(tableId); // Update each table to show cleared slots
     });
 
-    // Reset scheduled hours and slots for each person without touching availability
+    // Reset scheduled hours and slots for each person in memory
+    // and restore their initial availability
     people.forEach(person => {
         person.scheduledDropInHours = 0;
         person.scheduledGroupTutoringHours = 0;
-        person.assignedSlots = []; // Reset assigned slots
+        person.assignedSlots = [];
+
+        // Restore each person's availability to their initial state
+        if (allInitialAvailabilities[person.name]) {
+            person.availability = [...allInitialAvailabilities[person.name]];
+        }
     });
 
-    // Update UI
-    updateAllTables();
+    // Update the UI to reflect the reset
     updateLogPanel();
+
+    // Do not update localStorage here. The reset state is temporary and should not overwrite saved state.
+    alert('Schedule has been reset to the original state.');
 }
+
 
 
 function updateTable(tableId) {
