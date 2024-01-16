@@ -510,6 +510,7 @@ function removeAssignment(target, name, timeslot, hourType) {
         // Only add the timeslot back to the person's availability if it's not already there
         if (!person.availability.includes(timeslot)) {
             person.availability.push(timeslot);
+            person.availability.sort(sortTimes); // Sort timeslots chronologically
         }
 
         removeFromTableAssignments(name, timeslot, hourType, tableId);
@@ -765,6 +766,20 @@ function convertTo12hTime(time24h) {
 
     return `${hours}:${minutes} ${suffix}`;
 }
+
+function sortTimes(a, b) {
+    // Extract hours and minutes from the time strings
+    const timeRegex = /(\d+):(\d+) (AM|PM)/;
+    const [ , hoursA, minutesA, periodA ] = timeRegex.exec(a) || [];
+    const [ , hoursB, minutesB, periodB ] = timeRegex.exec(b) || [];
+
+    // Convert to 24-hour format for comparison
+    const totalMinutesA = (parseInt(hoursA) % 12 + (periodA === 'PM' ? 12 : 0)) * 60 + parseInt(minutesA);
+    const totalMinutesB = (parseInt(hoursB) % 12 + (periodB === 'PM' ? 12 : 0)) * 60 + parseInt(minutesB);
+
+    return totalMinutesA - totalMinutesB;
+}
+
 
 
 document.body.addEventListener('click', function(event) {
