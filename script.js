@@ -160,21 +160,29 @@ function saveState() {
     updateLogPanel();
 }
 
-
 function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     const savedPeople = localStorage.getItem('people');
+    const savedAllInitialAvailabilities = localStorage.getItem('allInitialAvailabilities');
 
+    // Load initial availabilities if available
+    if (savedAllInitialAvailabilities) {
+        allInitialAvailabilities = JSON.parse(savedAllInitialAvailabilities);
+    } else {
+        allInitialAvailabilities = { ...initialAvailability };
+    }
+
+    // Load and update table assignments
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
+        // Update table cell content and classes based on assignments
         Object.keys(tableAssignments).forEach(tableId => {
             tableAssignments[tableId].forEach(assignment => {
                 const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
                 if (cell) {
                     cell.textContent = assignment.names.join(", ");
                     cell.classList.add('filled-timeslot');
-                    cell.dataset.assigned = assignment.names.join(", ");
-                    cell.dataset.hourType = assignment.hourType;
+                    cell.dataset.assignedNames = JSON.stringify(assignment.names);
                 }
             });
             updateTable(tableId);
@@ -183,17 +191,36 @@ function loadState() {
         alert('No saved table assignments to load.');
     }
 
+    // Load and update people's availability and scheduled hours
     if (savedPeople) {
         people = JSON.parse(savedPeople);
+
+        // Reset each person's scheduled hours and availability, then reapply saved assignments
         people.forEach(person => {
-            person.availability = allInitialAvailabilities[person.name] || [];
-            person.assignedSlots.forEach(assignment => {
-                const timeslotIndex = person.availability.indexOf(assignment.timeslot);
-                if (timeslotIndex !== -1) {
-                    person.availability.splice(timeslotIndex, 1);
+            person.scheduledDropInHours = 0;
+            person.scheduledGroupTutoringHours = 0;
+            person.availability = allInitialAvailabilities[person.name] ? [...allInitialAvailabilities[person.name]] : [];
+
+            // Recalculate scheduled hours based on saved assignments
+            Object.values(tableAssignments).flat().forEach(assignment => {
+                if (assignment.names.includes(person.name)) {
+                    // Determine the hour type of each assignment
+                    const hourType = assignment.hourType;
+                    if (hourType === 'dropIn') {
+                        person.scheduledDropInHours++;
+                    } else if (hourType === 'groupTutoring') {
+                        person.scheduledGroupTutoringHours++;
+                    }
+
+                    // Remove the assigned timeslot from availability
+                    const timeslotIndex = person.availability.indexOf(assignment.timeslot);
+                    if (timeslotIndex !== -1) {
+                        person.availability.splice(timeslotIndex, 1);
+                    }
                 }
             });
         });
+
         updateLogPanel();
     } else {
         alert('No saved people data to load.');
