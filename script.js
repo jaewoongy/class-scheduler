@@ -115,6 +115,7 @@ function addStudent() {
     // Update allInitialAvailabilities with the new student's initial availability
     allInitialAvailabilities[studentName] = [...availability];
 
+    localStorage.setItem('allInitialAvailabilities', JSON.stringify(allInitialAvailabilities));
 
     // Clear the form for the next input
     document.getElementById('student-name').value = '';
@@ -162,17 +163,16 @@ function loadOrResetState() {
 
     const savedPeople = localStorage.getItem('people');
     if (savedPeople) {
-        console.log("Loading saved people from localStorage");
         people = JSON.parse(savedPeople);
-        resetPeopleToMatchTableAssignments(); // Align people's data with table assignments
+        resetPeopleToMatchTableAssignments(); // Make sure this function also resets the availability correctly
     } else {
-        console.log("Resetting people to initial availability");
         people = resetPeopleState();
     }
 
     updateAllTables();
     updateLogPanel();
 }
+
 
 
 
@@ -274,8 +274,8 @@ function resetPeopleState() {
     return Object.keys(initialAvailability).map(name => ({
         name: name,
         availability: [...initialAvailability[name]],
-        maxDropInHours: 5, // example value
-        maxGroupTutoringHours: 5, // example value
+        maxDropInHours: 5, // example value, adjust as needed
+        maxGroupTutoringHours: 5, // example value, adjust as needed
         scheduledDropInHours: 0,
         scheduledGroupTutoringHours: 0,
         assignedSlots: []
@@ -283,11 +283,20 @@ function resetPeopleState() {
 }
 
 function resetPeopleToMatchTableAssignments() {
-    // Reset each person's scheduled hours and assigned slots based on tableAssignments
     people.forEach(person => {
         person.scheduledDropInHours = 0;
         person.scheduledGroupTutoringHours = 0;
         person.assignedSlots = [];
+
+        // Use allInitialAvailabilities if the person's initial availability is not in initialAvailability
+        if (allInitialAvailabilities[person.name]) {
+            person.availability = [...allInitialAvailabilities[person.name]];
+        } else if (initialAvailability[person.name]) {
+            person.availability = [...initialAvailability[person.name]];
+        } else {
+            console.warn(`No initial availability found for: ${person.name}, initializing to empty array.`);
+            person.availability = [];
+        }
 
         Object.values(tableAssignments).flat().forEach(assignment => {
             if (assignment.names.includes(person.name)) {
@@ -302,10 +311,18 @@ function resetPeopleToMatchTableAssignments() {
                     type: hourType,
                     tableId: findTableIdByTimeslot(assignment.timeslot)
                 });
+
+                // Remove the assigned timeslot from availability
+                const index = person.availability.indexOf(assignment.timeslot);
+                if (index > -1) {
+                    person.availability.splice(index, 1);
+                }
             }
         });
     });
 }
+
+
 
 function applyLoadedAssignments() {
     // Clear existing assigned slots for each person
