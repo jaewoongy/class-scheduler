@@ -470,60 +470,48 @@ function showDropdown(event, timeslot) {
 }
 
 
-
-function removeAssignment(target, name, timeslot, hourType) {
-    console.log("Attempting to remove assignment:", { name, timeslot, hourType });
+function removeAssignment(target, name, timeslot) {
+    console.log("Attempting to remove assignment:", { name, timeslot });
     const tableId = findTableId(target);
     if (!tableId) {
-        console.error('Table ID is undefined, cannot remove assignment:', { name, timeslot, hourType });
+        console.error('Table ID is undefined, cannot remove assignment:', { name, timeslot });
         return;
     }
 
-    // Find the person object
     const person = people.find(p => p.name === name);
     if (!person) {
         console.error('Person not found:', name);
         return;
     }
 
-    // Find the assignment in tableAssignments
-    const assignment = tableAssignments[tableId].find(a => a.timeslot === timeslot);
-    if (assignment) {
-        // Remove the name from the assignment
-        assignment.names = assignment.names.filter(n => n !== name);
+    // Find the assignment for this person and timeslot in their assignedSlots
+    const assignmentIndex = person.assignedSlots.findIndex(as => as.timeslot === timeslot && as.tableId === tableId);
+    if (assignmentIndex !== -1) {
+        const assignment = person.assignedSlots[assignmentIndex];
+        person.assignedSlots.splice(assignmentIndex, 1);
 
-        // If no names left, remove the assignment from the table
-        if (assignment.names.length === 0) {
-            tableAssignments[tableId] = tableAssignments[tableId].filter(a => a !== assignment);
-        }
-
-        // Update the person's assigned slots
-        const slotIndex = person.assignedSlots.findIndex(slot => slot.timeslot === timeslot && slot.type === hourType && slot.tableId === tableId);
-        if (slotIndex !== -1) {
-            person.assignedSlots.splice(slotIndex, 1);
-        }
-
-        // Update the person's scheduled hours
-        if (hourType === 'dropIn') {
+        // Decrement the appropriate hours
+        if (assignment.type === 'dropIn') {
             person.scheduledDropInHours = Math.max(person.scheduledDropInHours - 1, 0);
-        } else if (hourType === 'groupTutoring') {
+        } else if (assignment.type === 'groupTutoring') {
             person.scheduledGroupTutoringHours = Math.max(person.scheduledGroupTutoringHours - 1, 0);
         }
 
-        // Update availability if the timeslot is not already there
+        // Update table assignments
+        removeFromTableAssignments(name, timeslot, assignment.type, tableId);
+        
+        // Add timeslot back to availability if needed
         if (!person.availability.includes(timeslot)) {
             person.availability.push(timeslot);
             person.availability.sort(sortTimes); // Sort timeslots chronologically
         }
-
-        // Update the UI
-        updateTable(tableId);
-        updateLogPanel();
     } else {
-        console.error('Assignment not found:', { name, timeslot, hourType, tableId });
+        console.error('Assignment not found:', { name, timeslot });
     }
-}
 
+    updateTable(tableId);
+    updateLogPanel(); // Refresh the UI to reflect changes
+}
 
 
 function closeDropdowns() {
