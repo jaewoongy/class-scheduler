@@ -420,17 +420,18 @@ function showDropdown(event, timeslot) {
     dropdown.style.left = `${event.pageX}px`;
     dropdown.style.top = `${event.pageY}px`;
 
-    // Check if someone is already assigned to this slot and create a "Remove" option
-    if (event.target.dataset.assigned) {
-        const assignedNames = event.target.dataset.assigned.split(', ');
+    // Check if someone is already assigned to this slot and create "Remove" options
+    if (event.target.dataset.assignedNames) {
+        const assignedNames = JSON.parse(event.target.dataset.assignedNames);
         assignedNames.forEach(assignedName => {
             const removeOption = document.createElement('div');
             removeOption.className = 'dropdown-content';
             removeOption.textContent = `Remove ${assignedName} (X)`;
             removeOption.onclick = function() {
-                const hourType = event.target.dataset.hourType;
-                if (hourType) {
-                    removeAssignment(event.target, assignedName, timeslot, hourType);
+                // Retrieve the hour type for each specific assignment
+                const assignment = tableAssignments[findTableId(event.target)].find(a => a.timeslot === timeslot && a.names.includes(assignedName));
+                if (assignment && assignment.hourType) {
+                    removeAssignment(event.target, assignedName, timeslot, assignment.hourType);
                 } else {
                     console.error('Hour type is undefined. Cannot remove assignment.');
                 }
@@ -469,6 +470,7 @@ function showDropdown(event, timeslot) {
 }
 
 
+
 function removeAssignment(target, name, timeslot, hourType) {
     console.log("Attempting to remove assignment:", { name, timeslot, hourType });
     const tableId = findTableId(target);
@@ -477,38 +479,51 @@ function removeAssignment(target, name, timeslot, hourType) {
         return;
     }
 
+    // Find the person object
     const person = people.find(p => p.name === name);
     if (!person) {
         console.error('Person not found:', name);
         return;
     }
 
-    const assignmentIndex = person.assignedSlots.findIndex(assignment =>
-        assignment.timeslot === timeslot && assignment.type === hourType && assignment.tableId === tableId
-    );
+    // Find the assignment in tableAssignments
+    const assignment = tableAssignments[tableId].find(a => a.timeslot === timeslot);
+    if (assignment) {
+        // Remove the name from the assignment
+        assignment.names = assignment.names.filter(n => n !== name);
 
-    if (assignmentIndex !== -1) {
-        person.assignedSlots.splice(assignmentIndex, 1);
-        // Decrement the appropriate hours
+        // If no names left, remove the assignment from the table
+        if (assignment.names.length === 0) {
+            tableAssignments[tableId] = tableAssignments[tableId].filter(a => a !== assignment);
+        }
+
+        // Update the person's assigned slots
+        const slotIndex = person.assignedSlots.findIndex(slot => slot.timeslot === timeslot && slot.type === hourType && slot.tableId === tableId);
+        if (slotIndex !== -1) {
+            person.assignedSlots.splice(slotIndex, 1);
+        }
+
+        // Update the person's scheduled hours
         if (hourType === 'dropIn') {
             person.scheduledDropInHours = Math.max(person.scheduledDropInHours - 1, 0);
         } else if (hourType === 'groupTutoring') {
             person.scheduledGroupTutoringHours = Math.max(person.scheduledGroupTutoringHours - 1, 0);
         }
 
-        // Update the availability and table assignments
-        removeFromTableAssignments(name, timeslot, hourType, tableId);
+        // Update availability if the timeslot is not already there
         if (!person.availability.includes(timeslot)) {
             person.availability.push(timeslot);
             person.availability.sort(sortTimes); // Sort timeslots chronologically
         }
+
+        // Update the UI
+        updateTable(tableId);
+        updateLogPanel();
     } else {
         console.error('Assignment not found:', { name, timeslot, hourType, tableId });
     }
-
-    updateTable(tableId);
-    updateLogPanel(); // Refresh the UI to reflect changes
 }
+
 
 
 function closeDropdowns() {
@@ -519,11 +534,6 @@ function assignPerson(target, name, timeslot, hourType) {
     const person = people.find(p => p.name === name);
     if (!person) {
         alert('Person not found.');
-        return; // Person must exist in the people array
-    }
-
-    if (!name || !timeslot || !hourType) {
-        console.error('Cannot assign person with undefined values:', { name, timeslot, hourType });
         return;
     }
 
@@ -536,7 +546,7 @@ function assignPerson(target, name, timeslot, hourType) {
     // Find or create the assignment for this timeslot
     let assignment = tableAssignments[tableId].find(a => a.timeslot === timeslot);
     if (!assignment) {
-        assignment = { timeslot, names: [] };
+        assignment = { timeslot, names: [], hourType };
         tableAssignments[tableId].push(assignment);
     }
 
@@ -552,14 +562,6 @@ function assignPerson(target, name, timeslot, hourType) {
         return;
     }
 
-    // Check if the person has remaining hours for the chosen hour type
-    let remainingHours = hourType === 'dropIn' ? person.maxDropInHours - person.scheduledDropInHours
-                                                : person.maxGroupTutoringHours - person.scheduledGroupTutoringHours;
-    if (remainingHours <= 0) {
-        alert(`${name} has no remaining ${hourType === 'dropIn' ? 'drop-in' : 'group tutoring'} hours.`);
-        return;
-    }
-
     // Assign the person to the slot and update the UI and internal data structures
     assignment.names.push(name);
     if (hourType === 'dropIn') {
@@ -568,9 +570,12 @@ function assignPerson(target, name, timeslot, hourType) {
         person.scheduledGroupTutoringHours++;
     }
     person.assignedSlots.push({ name, timeslot, type: hourType, tableId });
+
     updateTable(tableId);
     updateLogPanel();
 }
+
+
 
 
 function findTableId(element) {
