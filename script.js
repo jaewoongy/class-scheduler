@@ -36,26 +36,22 @@ let tableAssignments = {
 };
 
 
-
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM fully loaded and parsed");
+    loadOrResetState();
+
     const scheduleContainer = document.getElementById('schedule-container');
     // Ensure that 'schedule-container' exists in your HTML.
     
     for (let i = 1; i <= 6; i++) {
         scheduleContainer.appendChild(createTable(i));
     }
-    loadState(); // This function should load the state. Ensure it's not failing.
 
-    // Ensure these buttons exist in your HTML with these exact IDs.
+    // Attach event listeners to buttons
     const saveButton = document.getElementById('save-button');
     const resetButton = document.getElementById('reset-button');
     const loadButton = document.getElementById('load-button');
-    const savedPeople = localStorage.getItem('people');
-    if (savedPeople) {
-        people = JSON.parse(savedPeople);
-    }
 
-    // Add null checks for buttons to avoid errors if they don't exist.
     saveButton?.addEventListener('click', function() {
         saveState();
     });
@@ -66,21 +62,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Uncommented this section; ensure 'load-button' exists if you're using this.
     loadButton.addEventListener('click', function() {
-        if (confirm('Do you want to load previously saved data?')) {
-            loadState();
-        }
+        loadState();
     });
 
     const addStudentButton = document.getElementById('add-student-button');
     addStudentButton.addEventListener('click', addStudent);
 
-
     updateLogPanel();
 });
 
 function addStudent() {
+    console.log("Added a new student, unsaved:", people);
+
     const studentName = document.getElementById('student-name').value.trim();
     const dropInHoursInput = document.getElementById('drop-in-hours').value;
     const groupTutoringHoursInput = document.getElementById('group-tutoring-hours').value;
@@ -121,9 +115,6 @@ function addStudent() {
     // Update allInitialAvailabilities with the new student's initial availability
     allInitialAvailabilities[studentName] = [...availability];
 
-    // Save updated people array and allInitialAvailabilities to localStorage
-    localStorage.setItem('people', JSON.stringify(people));
-    localStorage.setItem('allInitialAvailabilities', JSON.stringify(allInitialAvailabilities));
 
     // Clear the form for the next input
     document.getElementById('student-name').value = '';
@@ -148,100 +139,171 @@ function resetForm() {
     document.getElementById('student-availability').selectedIndex = 0;
 }
 function saveState() {
-    Object.keys(tableAssignments).forEach(tableId => {
-        tableAssignments[tableId] = tableAssignments[tableId].map(assignment => {
-            return { ...assignment, tableId };
-        });
-    });
-
-    localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
     localStorage.setItem('people', JSON.stringify(people));
-    alert('Schedule saved!');
+    localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+    console.log("State saved:", people, tableAssignments);
+
+    // Notify the user
+    alert('State saved!');
     updateLogPanel();
 }
 
-function loadState() {
-    const savedAssignments = localStorage.getItem('tableAssignments');
-    const savedPeople = localStorage.getItem('people');
-    const savedAllInitialAvailabilities = localStorage.getItem('allInitialAvailabilities');
 
-    // Load initial availabilities if available
-    if (savedAllInitialAvailabilities) {
-        allInitialAvailabilities = JSON.parse(savedAllInitialAvailabilities);
+function resetPeopleSchedule() {
+    people.forEach(person => {
+        person.scheduledDropInHours = 0;
+        person.scheduledGroupTutoringHours = 0;
+        person.assignedSlots = [];
+    });
+}
+function loadOrResetState() {
+    const savedAssignments = localStorage.getItem('tableAssignments');
+    tableAssignments = savedAssignments ? JSON.parse(savedAssignments) : resetTableAssignments();
+
+    const savedPeople = localStorage.getItem('people');
+    if (savedPeople) {
+        console.log("Loading saved people from localStorage");
+        people = JSON.parse(savedPeople);
+        resetPeopleToMatchTableAssignments(); // Align people's data with table assignments
     } else {
-        allInitialAvailabilities = { ...initialAvailability };
+        console.log("Resetting people to initial availability");
+        people = resetPeopleState();
     }
 
-    // Load and update table assignments
+    updateAllTables();
+    updateLogPanel();
+}
+
+
+
+
+
+function loadState() {
+    console.log("Calling loadState");
+    const savedAssignments = localStorage.getItem('tableAssignments');
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
-        // Update table cell content and classes based on assignments
-        Object.keys(tableAssignments).forEach(tableId => {
-            tableAssignments[tableId].forEach(assignment => {
-                const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
-                if (cell) {
-                    cell.textContent = assignment.names.join(", ");
-                    cell.classList.add('filled-timeslot');
-                    cell.dataset.assignedNames = JSON.stringify(assignment.names);
-                }
-            });
-            updateTable(tableId);
-        });
-    } else {
-        alert('No saved table assignments to load.');
+        updateAllTables(); // Update all tables based on the current state of tableAssignments
     }
+    updateLogPanel(); // Update log panel to reflect the current state
+}
 
-    // Load and update people's availability and scheduled hours
-    if (savedPeople) {
-        people = JSON.parse(savedPeople);
+function resetTableAssignments() {
+    // Reset tableAssignments object to its initial state
+    return {
+        table1: [], table2: [], table3: [],
+        table4: [], table5: [], table6: []
+    };
+}
 
-        // Reset each person's scheduled hours and availability, then reapply saved assignments
-        people.forEach(person => {
-            person.scheduledDropInHours = 0;
-            person.scheduledGroupTutoringHours = 0;
-            person.availability = allInitialAvailabilities[person.name] ? [...allInitialAvailabilities[person.name]] : [];
+function resetPeopleBasedOnAssignments() {
+    // Clear previous assignments and reset scheduled hours for each person
+    people.forEach(person => {
+        person.scheduledDropInHours = 0;
+        person.scheduledGroupTutoringHours = 0;
+        person.assignedSlots = [];
 
-            // Recalculate scheduled hours based on saved assignments
-            Object.values(tableAssignments).flat().forEach(assignment => {
+        // Reapply assignments based on current tableAssignments
+        for (let tableId in tableAssignments) {
+            tableAssignments[tableId].forEach(assignment => {
                 if (assignment.names.includes(person.name)) {
-                    // Determine the hour type of each assignment
                     const hourType = assignment.hourType;
                     if (hourType === 'dropIn') {
                         person.scheduledDropInHours++;
                     } else if (hourType === 'groupTutoring') {
                         person.scheduledGroupTutoringHours++;
                     }
+                    person.assignedSlots.push({
+                        timeslot: assignment.timeslot,
+                        type: hourType,
+                        tableId: tableId
+                    });
+                }
+            });
+        }
+    });
+}
 
-                    // Remove the assigned timeslot from availability
-                    const timeslotIndex = person.availability.indexOf(assignment.timeslot);
-                    if (timeslotIndex !== -1) {
-                        person.availability.splice(timeslotIndex, 1);
+function resetPeopleAssignments() {
+    // Clear previous assignments and reset scheduled hours
+    people.forEach(person => {
+        person.scheduledDropInHours = 0;
+        person.scheduledGroupTutoringHours = 0;
+        person.assignedSlots = [];
+    });
+
+    // Reapply assignments based on loaded tableAssignments
+    Object.keys(tableAssignments).forEach(tableId => {
+        tableAssignments[tableId].forEach(assignment => {
+            assignment.names.forEach(name => {
+                const person = people.find(p => p.name === name);
+                if (person) {
+                    const hourType = assignment.hourType;
+                    if (hourType === 'dropIn') {
+                        person.scheduledDropInHours++;
+                    } else if (hourType === 'groupTutoring') {
+                        person.scheduledGroupTutoringHours++;
                     }
+                    person.assignedSlots.push({
+                        timeslot: assignment.timeslot,
+                        type: hourType,
+                        tableId: tableId
+                    });
                 }
             });
         });
+    });
 
-        updateLogPanel();
-    } else {
-        alert('No saved people data to load.');
-    }
+    // Refresh each person's availability
+    refreshPeopleAvailability();
 }
 
-
+function refreshPeopleAvailability() {
+    people.forEach(person => {
+        person.availability = allInitialAvailabilities[person.name] ? [...allInitialAvailabilities[person.name]] : [];
+        person.assignedSlots.forEach(assignment => {
+            const index = person.availability.indexOf(assignment.timeslot);
+            if (index > -1) {
+                person.availability.splice(index, 1);
+            }
+        });
+    });
+}
 
 function resetPeopleState() {
+    return Object.keys(initialAvailability).map(name => ({
+        name: name,
+        availability: [...initialAvailability[name]],
+        maxDropInHours: 5, // example value
+        maxGroupTutoringHours: 5, // example value
+        scheduledDropInHours: 0,
+        scheduledGroupTutoringHours: 0,
+        assignedSlots: []
+    }));
+}
+
+function resetPeopleToMatchTableAssignments() {
+    // Reset each person's scheduled hours and assigned slots based on tableAssignments
     people.forEach(person => {
-        person.scheduledHours = 0;
         person.scheduledDropInHours = 0;
         person.scheduledGroupTutoringHours = 0;
         person.assignedSlots = [];
 
-        if (initialAvailability[person.name]) {
-            person.availability = [...initialAvailability[person.name]];
-        } else {
-            // Handle no initial data as appropriate
-            person.availability = [];
-        }
+        Object.values(tableAssignments).flat().forEach(assignment => {
+            if (assignment.names.includes(person.name)) {
+                const hourType = assignment.hourType;
+                if (hourType === 'dropIn') {
+                    person.scheduledDropInHours++;
+                } else if (hourType === 'groupTutoring') {
+                    person.scheduledGroupTutoringHours++;
+                }
+                person.assignedSlots.push({
+                    timeslot: assignment.timeslot,
+                    type: hourType,
+                    tableId: findTableIdByTimeslot(assignment.timeslot)
+                });
+            }
+        });
     });
 }
 
@@ -341,7 +403,9 @@ function updateTable(tableId) {
 
 // Update All Tables Function
 function updateAllTables() {
-    Object.keys(tableAssignments).forEach(tableId => updateTable(tableId));
+    Object.keys(tableAssignments).forEach(tableId => {
+        updateTable(tableId); // Assuming updateTable function updates each table
+    });
 }
 
 function resetLocalStorage() {
@@ -579,6 +643,20 @@ function findTableId(element) {
     return element ? element.id : undefined;
 }
 
+function findTableIdByTimeslot(timeslot) {
+    // Loop through each tableId in tableAssignments
+    for (let tableId in tableAssignments) {
+        if (tableAssignments.hasOwnProperty(tableId)) {
+            // Check if this table has the timeslot in its assignments
+            const found = tableAssignments[tableId].some(assignment => assignment.timeslot === timeslot);
+            if (found) {
+                // Return the tableId where the timeslot is found
+                return tableId;
+            }
+        }
+    }
+    return null; // Return null if no matching tableId is found
+}
 
 
 function addToTableAssignments(name, timeslot, hourType, tableId) {
@@ -598,8 +676,6 @@ function addToTableAssignments(name, timeslot, hourType, tableId) {
     }
 }
 
-
-
 function removeFromTableAssignments(name, timeslot, hourType, tableId) {
     if (tableAssignments[tableId]) {
         const assignment = tableAssignments[tableId].find(a => a.timeslot === timeslot);
@@ -617,10 +693,13 @@ function removeFromTableAssignments(name, timeslot, hourType, tableId) {
 
 
 function updateLogPanel() {
+    console.log("Updating Log Panel");
+
     const logPanel = document.getElementById('schedule-info');
     logPanel.innerHTML = ''; // Clear existing content
 
     people.forEach(person => {
+        console.log("Person in log panel:", person);
         const personDiv = document.createElement('div');
         personDiv.className = 'person-div';
 
