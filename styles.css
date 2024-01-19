@@ -120,14 +120,6 @@ body {
     width: auto; /* Allow the select element to size according to its content */
 }
 
-#student-name {
-    flex: 0 1 150px; /* Don't grow, allow shrink, start with 150px */
-}
-
-#add-student-button {
-    flex: 0 0 auto; /* Don't grow or shrink */
-    margin-left: 10px; /* Add some space to the left of the button */
-}
 
 /* ... other existing styles ... */
 
@@ -205,7 +197,7 @@ body {
     overflow: hidden;
 }
 
-#drop-in-hours, #group-tutoring-hours {
+#student-name, #drop-in-hours, #group-tutoring-hours, #paste-student-name, #paste-drop-in-hours, #paste-group-tutoring-hours{
     height: 2em; /* Adjust height as needed */
     /* Other styles */
 }
@@ -222,4 +214,19 @@ body {
 
 .remove-button:hover {
     background-color: darkred;
+}
+
+#paste-form-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    box-sizing: border-box;
+    width: 100%; /* Ensure the form container spans the full width */
+    margin-top: 60px; /* Make space for the fixed position of the .scrollable-form */
+}
+
+#paste-area {
+    height: 4em; /* Double the height */
+    width: 850px; /* Set a specific width */
 }
