@@ -198,8 +198,6 @@ function calculateAvailability(unavailableTimes) {
 }
 
 
-
-
 function parsePastedContent(pastedContent) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const timeSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
@@ -214,21 +212,24 @@ function parsePastedContent(pastedContent) {
             let timeslot = timeSlots[index];
             line = line.trim();
             console.log(`Processing line ${index} for timeslot '${timeslot}': '${line}'`);
-
-            if (line === '') {
-                console.log(`  Line is blank, adding full availability for '${timeslot}'`);
-                daysOfWeek.forEach(day => availableTimes.push(`${day} ${timeslot}`));
-            } else {
-                let unavailableDays = line.split(',').map(day => day.trim());
-                daysOfWeek.forEach(day => {
-                    if (!unavailableDays.includes(day)) {
-                        availableTimes.push(`${day} ${timeslot}`);
-                    }
-                });
-            }
+    
+            // Convert the line to uppercase and abbreviate to three characters
+            let unavailableDays = line === '' ? [] : line.toUpperCase().split(',').map(day => day.trim().substring(0, 3));
+            console.log(`  Days listed as unavailable for '${timeslot}': ${unavailableDays.join(', ') || 'None'}`);
+    
+            daysOfWeek.forEach(day => {
+                // Convert day to uppercase and abbreviate to three characters for comparison
+                if (!unavailableDays.includes(day.substring(0, 3).toUpperCase())) {
+                    availableTimes.push(`${day} ${timeslot}`);
+                    console.log(`    Not Excluding ${day} ${timeslot} as it is available`);
+                } else {
+                    console.log(`    Excluding ${day} ${timeslot} as it is unavailable`);
+                }
+            });
         }
     });
-
+    
+    
     console.log(`Finished processing. Available times:`, availableTimes);
     return availableTimes;
 }
@@ -249,6 +250,8 @@ MON, TUE, WED, THU
 
 let availableTimes = parsePastedContent(pastedContent);
 console.log("Final available times:", availableTimes);
+
+
 
 
 
