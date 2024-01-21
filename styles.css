@@ -222,11 +222,34 @@ body {
     align-items: center;
     padding: 10px;
     box-sizing: border-box;
-    width: 100%; /* Ensure the form container spans the full width */
-    margin-top: 60px; /* Make space for the fixed position of the .scrollable-form */
+    width: 100%;
+    margin-top: 60px;
+}
+
+.schedule-container {
+    display: flex;
+}
+
+.time-labels {
+    display: flex;
+    flex-direction: column;
+    padding-right: 8px; /* Adjust right padding to align with the paste-area */
+    text-align: right;
+    font-size: 13.5px; /* Match the font size to the text in the textarea */
+    line-height: 1.4; /* Adjust line height to match the textarea line height */
+    margin-top: 2px; /* Adjust top margin to align with the textarea */
+}
+
+.time-labels div {
+    margin-bottom: -3.5px; /* Set the margin-bottom to 0 or another value to adjust the gap */
+}
+
+
+#paste-add-student-button {
+    align-self: center;
 }
 
 #paste-area {
-    height: 13em; /* Double the height */
-    width: 850px; /* Set a specific width */
+    height: 13em;
+    width: 850px;
 }

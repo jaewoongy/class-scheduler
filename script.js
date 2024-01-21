@@ -132,10 +132,6 @@ function addStudent() {
 }
 
 
-
-
-
-
 function addStudentFromPaste() {
     const studentNameInput = document.getElementById('paste-student-name');
     const dropInHoursInput = document.getElementById('paste-drop-in-hours');
@@ -206,53 +202,51 @@ function parsePastedContent(pastedContent) {
     let lines = pastedContent.split(/\r?\n/);
 
     console.log(`Total lines in pasted content: ${lines.length}`);
+    console.log(`Pasted content before processing:\n'${pastedContent}'`);
 
     lines.forEach((line, index) => {
         if (index < timeSlots.length) {
             let timeslot = timeSlots[index];
+            console.log(`Raw line ${index}: '${line}'`); // Logs the raw line for debugging
             line = line.trim();
             console.log(`Processing line ${index} for timeslot '${timeslot}': '${line}'`);
-    
-            // Convert the line to uppercase and abbreviate to three characters
-            let unavailableDays = line === '' ? [] : line.toUpperCase().split(',').map(day => day.trim().substring(0, 3));
-            console.log(`  Days listed as unavailable for '${timeslot}': ${unavailableDays.join(', ') || 'None'}`);
-    
-            daysOfWeek.forEach(day => {
-                // Convert day to uppercase and abbreviate to three characters for comparison
-                if (!unavailableDays.includes(day.substring(0, 3).toUpperCase())) {
-                    availableTimes.push(`${day} ${timeslot}`);
-                    console.log(`    Not Excluding ${day} ${timeslot} as it is available`);
-                } else {
-                    console.log(`    Excluding ${day} ${timeslot} as it is unavailable`);
-                }
-            });
+
+            if (line === '' || !line.match(/\S/)) { // Checks if the line is empty or contains only whitespace
+                console.log(`  Line is blank or contains only whitespace, adding full availability for '${timeslot}'`);
+                daysOfWeek.forEach(day => availableTimes.push(`${day} ${timeslot}`));
+            } else {
+                let unavailableDays = line.split(/\s*,\s*/).map(day => day.trim().toUpperCase());
+                console.log(`Unavailable days for '${timeslot}': ${unavailableDays.join(', ')}`);
+
+                daysOfWeek.forEach(day => {
+                    if (!unavailableDays.includes(day.toUpperCase())) {
+                        availableTimes.push(`${day} ${timeslot}`);
+                    }
+                });
+            }
         }
     });
-    
-    
+
     console.log(`Finished processing. Available times:`, availableTimes);
     return availableTimes;
 }
 
-// Test the function with your provided data
+// Test the function with the provided data
 const pastedContent = `
-    
-
+MON, WED
+MON, WED
 MON, WED
 
-MON, WED, THU
+TUE, THU
+MON, TUE, WED, THU
+MON, WED
 MON, TUE, WED, THU
 MON, TUE, WED, THU
-MON, TUE, WED, THU
-MON, TUE, WED, THU
-MON, TUE, WED, THU
-`;
+MON, WED
+`.trim(); // Make sure to trim the pasted content to remove any leading/trailing whitespace
 
 let availableTimes = parsePastedContent(pastedContent);
 console.log("Final available times:", availableTimes);
-
-
-
 
 
 
