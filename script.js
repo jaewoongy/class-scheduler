@@ -197,46 +197,58 @@ function calculateAvailability(unavailableTimes) {
     return allTimes.filter(time => !unavailableTimes.includes(time));
 }
 
+
+
+
 function parsePastedContent(pastedContent) {
     const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const timeSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
 
-    let availableTimes = new Set(daysOfWeek.flatMap(day => timeSlots.map(time => `${day} ${time}`)));
+    let availableTimes = [];
+    let lines = pastedContent.split(/\r?\n/);
 
-    const lines = pastedContent.trim().split(/\r?\n/);
+    console.log(`Total lines in pasted content: ${lines.length}`);
+
     lines.forEach((line, index) => {
         if (index < timeSlots.length) {
-            const days = line.toUpperCase().split(/[\s,]+/).map(day => 
-                day.charAt(0) + day.substring(1).toLowerCase() // Convert to title case
-            ).filter(day => daysOfWeek.includes(day));
+            let timeslot = timeSlots[index];
+            line = line.trim();
+            console.log(`Processing line ${index} for timeslot '${timeslot}': '${line}'`);
 
-            days.forEach(day => {
-                availableTimes.delete(`${day} ${timeSlots[index]}`);
-            });
+            if (line === '') {
+                console.log(`  Line is blank, adding full availability for '${timeslot}'`);
+                daysOfWeek.forEach(day => availableTimes.push(`${day} ${timeslot}`));
+            } else {
+                let unavailableDays = line.split(',').map(day => day.trim());
+                daysOfWeek.forEach(day => {
+                    if (!unavailableDays.includes(day)) {
+                        availableTimes.push(`${day} ${timeslot}`);
+                    }
+                });
+            }
         }
     });
 
-    return Array.from(availableTimes).sort();
+    console.log(`Finished processing. Available times:`, availableTimes);
+    return availableTimes;
 }
 
-// Test the function with your pasted content
+// Test the function with your provided data
 const pastedContent = `
-SUN, MON, WED
-SUN, WED
-SUN
-SUN
-SUN, TUE, THU
-SUN, MON, TUE, WED, THU
-SUN, MON, TUE, WED, THU
-SUN, MON, TUE, WED, THU
-SUN, MON, TUE, WED, THU
-SUN, MON, TUE, WED, THU
-SUN, MON, TUE, WED, THU`;
+    
+
+MON, WED
+
+MON, WED, THU
+MON, TUE, WED, THU
+MON, TUE, WED, THU
+MON, TUE, WED, THU
+MON, TUE, WED, THU
+MON, TUE, WED, THU
+`;
 
 let availableTimes = parsePastedContent(pastedContent);
-console.log("Available times:", availableTimes);
-
-
+console.log("Final available times:", availableTimes);
 
 
 

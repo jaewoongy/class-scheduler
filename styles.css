@@ -227,6 +227,6 @@ body {
 }
 
 #paste-area {
-    height: 4em; /* Double the height */
+    height: 13em; /* Double the height */
     width: 850px; /* Set a specific width */
 }
