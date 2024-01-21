@@ -204,28 +204,28 @@ function parsePastedContent(pastedContent) {
     console.log(`Total lines in pasted content: ${lines.length}`);
     console.log(`Pasted content before processing:\n'${pastedContent}'`);
 
-    lines.forEach((line, index) => {
-        if (index < timeSlots.length) {
-            let timeslot = timeSlots[index];
-            console.log(`Raw line ${index}: '${line}'`); // Logs the raw line for debugging
-            line = line.trim();
-            console.log(`Processing line ${index} for timeslot '${timeslot}': '${line}'`);
+    // Process each timeslot with the corresponding line from the pasted content
+    for (let i = 0; i < timeSlots.length; i++) {
+        let timeslot = timeSlots[i];
+        let line = lines[i] || ''; // Use an empty string if the line is undefined (for missing lines)
+        console.log(`Raw line ${i}: '${line}'`); // Logs the raw line for debugging
+        line = line.trim();
+        console.log(`Processing line ${i} for timeslot '${timeslot}': '${line}'`);
 
-            if (line === '' || !line.match(/\S/)) { // Checks if the line is empty or contains only whitespace
-                console.log(`  Line is blank or contains only whitespace, adding full availability for '${timeslot}'`);
-                daysOfWeek.forEach(day => availableTimes.push(`${day} ${timeslot}`));
-            } else {
-                let unavailableDays = line.split(/\s*,\s*/).map(day => day.trim().toUpperCase());
-                console.log(`Unavailable days for '${timeslot}': ${unavailableDays.join(', ')}`);
+        if (line === '') {
+            console.log(`  Line is blank, adding full availability for '${timeslot}'`);
+            daysOfWeek.forEach(day => availableTimes.push(`${day} ${timeslot}`));
+        } else {
+            let unavailableDays = line.split(/\s*,\s*/).map(day => day.trim().toUpperCase());
+            console.log(`Unavailable days for '${timeslot}': ${unavailableDays.join(', ')}`);
 
-                daysOfWeek.forEach(day => {
-                    if (!unavailableDays.includes(day.toUpperCase())) {
-                        availableTimes.push(`${day} ${timeslot}`);
-                    }
-                });
-            }
+            daysOfWeek.forEach(day => {
+                if (!unavailableDays.includes(day.toUpperCase())) {
+                    availableTimes.push(`${day} ${timeslot}`);
+                }
+            });
         }
-    });
+    }
 
     console.log(`Finished processing. Available times:`, availableTimes);
     return availableTimes;
