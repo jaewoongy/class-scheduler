@@ -233,10 +233,11 @@ function parsePastedContent(pastedContent) {
 
 // Test the function with the provided data
 const pastedContent = `
+None
 MON, WED
 MON, WED
 MON, WED
-
+None
 TUE, THU
 MON, TUE, WED, THU
 MON, WED
