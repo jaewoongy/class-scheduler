@@ -898,30 +898,39 @@ function removePerson(identifier) {
         return; // Exit if the person is not found
     }
 
-    if (confirm('Are you sure you want to remove this person?')) {
-        // Remove assignments from the tables
-        people[personIndex].assignedSlots.forEach(assignment => {
-            // Find the table cell and update UI
-            const tableId = `table${assignment.timeslot.split(' ')[0]}`; // Assuming table ID is derived from the day
-            const cell = document.querySelector(`#${tableId} [data-timeslot='${assignment.timeslot}']`);
-            if (cell) {
-                cell.classList.remove('filled-timeslot');
-                cell.textContent = 'Available';
-                delete cell.dataset.assigned;
-                delete cell.dataset.hourType;
-            }
+    const person = people[personIndex];
+    if (!person) {
+        alert('Person not found.');
+        return;
+    }
 
-            // Update tableAssignments
-            removeFromTableAssignments(people[personIndex].name, assignment.timeslot, assignment.type, tableId);
+    if (confirm('Are you sure you want to remove this person?')) {
+        // Remove the person's assignments from each table
+        Object.keys(tableAssignments).forEach(tableId => {
+            tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
+                const isAssignedToPerson = assignment.names.includes(person.name);
+                if (isAssignedToPerson) {
+                    // Remove the person's name from the assignment
+                    assignment.names = assignment.names.filter(name => name !== person.name);
+                }
+                return !isAssignedToPerson;
+            });
         });
 
         // Remove the person from the people array
         people.splice(personIndex, 1);
 
+        // Save changes to localStorage
+        localStorage.setItem('people', JSON.stringify(people));
+        localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+
         // Update the display
+        updateAllTables(); // Make sure this function updates the tables in the UI
         updateLogPanel();
+        alert(`${person.name} has been removed.`);
     }
 }
+
 
 // Call updateLogPanel initially to set up the log panel
 updateLogPanel();
