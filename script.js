@@ -303,10 +303,47 @@ function loadState() {
     const savedAssignments = localStorage.getItem('tableAssignments');
     if (savedAssignments) {
         tableAssignments = JSON.parse(savedAssignments);
-        updateAllTables(); // Update all tables based on the current state of tableAssignments
+        
+        // Clear existing assigned slots for each person
+        people.forEach(person => {
+            person.assignedSlots = [];
+            person.scheduledDropInHours = 0;
+            person.scheduledGroupTutoringHours = 0;
+        });
+
+        // Reapply assignments to each person based on loaded tableAssignments
+        Object.keys(tableAssignments).forEach(tableId => {
+            tableAssignments[tableId].forEach(assignment => {
+                assignment.names.forEach(name => {
+                    const person = people.find(p => p.name === name);
+                    if (person) {
+                        person.assignedSlots.push({
+                            timeslot: assignment.timeslot,
+                            type: assignment.hourType,
+                            tableId: tableId
+                        });
+
+                        if (assignment.hourType === 'dropIn') {
+                            person.scheduledDropInHours++;
+                        } else {
+                            person.scheduledGroupTutoringHours++;
+                        }
+                    }
+                });
+            });
+        });
+
+        // Update the UI for each table
+        updateAllTables();
+
+        // Update the log panel to reflect the current state
+        updateLogPanel();
+    } else {
+        // Handle case where there is no saved state
+        console.log("No saved state to load.");
     }
-    updateLogPanel(); // Update log panel to reflect the current state
 }
+
 
 function resetTableAssignments() {
     // Reset tableAssignments object to its initial state
