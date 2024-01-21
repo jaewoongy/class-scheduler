@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const addStudentButton = document.getElementById('add-student-button');
     addStudentButton.addEventListener('click', addStudent);
+    const pasteAddStudentButton = document.getElementById('paste-add-student-button');
+    pasteAddStudentButton.addEventListener('click', addStudentFromPaste);
 
     updateLogPanel();
 });
@@ -128,6 +130,114 @@ function addStudent() {
     alert('Student added!');
     updateLogPanel(); // Function to update the display of the schedule
 }
+
+
+
+
+
+
+function addStudentFromPaste() {
+    const studentNameInput = document.getElementById('paste-student-name');
+    const dropInHoursInput = document.getElementById('paste-drop-in-hours');
+    const groupTutoringHoursInput = document.getElementById('paste-group-tutoring-hours');
+    const pasteArea = document.getElementById('paste-area');
+
+    const studentName = studentNameInput.value.trim();
+    const dropInHours = parseInt(dropInHoursInput.value, 10) || 0;
+    const groupTutoringHours = parseInt(groupTutoringHoursInput.value, 10) || 0;
+    const pastedContent = pasteArea.value.trim();
+
+    // Validate inputs
+    if (!studentName) {
+        alert('Please enter a student name.');
+        return;
+    }
+    if (!pastedContent) {
+        alert('Please paste the content into the box.');
+        return;
+    }
+
+    const availability = parsePastedContent(pastedContent);
+
+    // Add student if they do not already exist
+    if (people.some(person => person.name === studentName)) {
+        alert(`A student with the name ${studentName} already exists.`);
+        return;
+    }
+
+    people.push({
+        name: studentName,
+        availability: availability,
+        maxDropInHours: dropInHours,
+        maxGroupTutoringHours: groupTutoringHours,
+        scheduledDropInHours: 0,
+        scheduledGroupTutoringHours: 0,
+        assignedSlots: []
+    });
+
+    // Update storage and UI
+    allInitialAvailabilities[studentName] = availability;
+    localStorage.setItem('allInitialAvailabilities', JSON.stringify(allInitialAvailabilities));
+
+    // Clear inputs
+    studentNameInput.value = '';
+    dropInHoursInput.value = '';
+    groupTutoringHoursInput.value = '';
+    pasteArea.value = '';
+
+    alert('Student added from paste!');
+    updateLogPanel();
+}
+
+function calculateAvailability(unavailableTimes) {
+    const allTimes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].flatMap(day => 
+        ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'].map(time => `${day} ${time}`)
+    );
+
+    return allTimes.filter(time => !unavailableTimes.includes(time));
+}
+
+function parsePastedContent(pastedContent) {
+    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const timeSlots = ['10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM'];
+
+    let availableTimes = new Set(daysOfWeek.flatMap(day => timeSlots.map(time => `${day} ${time}`)));
+
+    const lines = pastedContent.trim().split(/\r?\n/);
+    lines.forEach((line, index) => {
+        if (index < timeSlots.length) {
+            const days = line.toUpperCase().split(/[\s,]+/).map(day => 
+                day.charAt(0) + day.substring(1).toLowerCase() // Convert to title case
+            ).filter(day => daysOfWeek.includes(day));
+
+            days.forEach(day => {
+                availableTimes.delete(`${day} ${timeSlots[index]}`);
+            });
+        }
+    });
+
+    return Array.from(availableTimes).sort();
+}
+
+// Test the function with your pasted content
+const pastedContent = `
+SUN, MON, WED
+SUN, WED
+SUN
+SUN
+SUN, TUE, THU
+SUN, MON, TUE, WED, THU
+SUN, MON, TUE, WED, THU
+SUN, MON, TUE, WED, THU
+SUN, MON, TUE, WED, THU
+SUN, MON, TUE, WED, THU
+SUN, MON, TUE, WED, THU`;
+
+let availableTimes = parsePastedContent(pastedContent);
+console.log("Available times:", availableTimes);
+
+
+
 
 
 
