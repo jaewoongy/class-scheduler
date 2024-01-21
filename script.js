@@ -295,23 +295,22 @@ function loadOrResetState() {
 
 
 
-
-
-
 function loadState() {
     console.log("Calling loadState");
     const savedAssignments = localStorage.getItem('tableAssignments');
     if (savedAssignments) {
-        tableAssignments = JSON.parse(savedAssignments);
-        
-        // Clear existing assigned slots for each person
+        // Clear existing assignments and hours before applying the loaded state
         people.forEach(person => {
             person.assignedSlots = [];
             person.scheduledDropInHours = 0;
             person.scheduledGroupTutoringHours = 0;
+            // Reset availability to initial availability
+            person.availability = allInitialAvailabilities[person.name] ? [...allInitialAvailabilities[person.name]] : [];
         });
 
-        // Reapply assignments to each person based on loaded tableAssignments
+        tableAssignments = JSON.parse(savedAssignments);
+
+        // Apply the loaded assignments to each person
         Object.keys(tableAssignments).forEach(tableId => {
             tableAssignments[tableId].forEach(assignment => {
                 assignment.names.forEach(name => {
@@ -325,24 +324,30 @@ function loadState() {
 
                         if (assignment.hourType === 'dropIn') {
                             person.scheduledDropInHours++;
-                        } else {
+                        } else if (assignment.hourType === 'groupTutoring') {
                             person.scheduledGroupTutoringHours++;
+                        }
+
+                        // Remove the assigned timeslot from the person's initial availability
+                        const index = person.availability.indexOf(assignment.timeslot);
+                        if (index > -1) {
+                            person.availability.splice(index, 1);
                         }
                     }
                 });
             });
         });
 
-        // Update the UI for each table
         updateAllTables();
-
-        // Update the log panel to reflect the current state
         updateLogPanel();
     } else {
         // Handle case where there is no saved state
         console.log("No saved state to load.");
+        // Optionally, reset the UI to a completely clear state if no saved state is found
+        resetSchedule();
     }
 }
+
 
 
 function resetTableAssignments() {
