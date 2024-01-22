@@ -62,9 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    loadButton.addEventListener('click', function() {
-        loadState();
-    });
+    loadButton.addEventListener('click', loadState);
+    loadState(); // Simulate clicking the 'Load Schedule' button
 
     const addStudentButton = document.getElementById('add-student-button');
     addStudentButton.addEventListener('click', addStudent);
