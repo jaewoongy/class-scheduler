@@ -216,14 +216,15 @@ body {
     background-color: darkred;
 }
 
-#paste-form-container {
+#form-container, #paste-form-container {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    flex-direction: column; /* Stack children vertically */
+    gap: 10px; /* This creates space between the stacked items */
+    align-items: flex-start; /* Align items to the start of the flex container */
     padding: 10px;
     box-sizing: border-box;
-    width: 100%;
-    margin-top: 60px;
+    width: 100%; /* Ensure the form container spans the full width */
+    margin-top: 60px; /* Make space for the fixed position of the .scrollable-form */
 }
 
 .schedule-container {

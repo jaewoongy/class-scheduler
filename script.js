@@ -666,7 +666,7 @@ function createTable(buildingNumber) {
     const titleDiv = document.createElement('div');
     titleDiv.className = 'table-title';
     titleDiv.contentEditable = true;
-    titleDiv.textContent = `Building ${buildingNumber} (Click to Change Title)`; // Default text
+    titleDiv.textContent = `Building ${buildingNumber}`; // Default text
 
 
     const buildingDiv = document.createElement('div');
