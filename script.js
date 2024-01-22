@@ -53,7 +53,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadButton = document.getElementById('load-button');
 
     saveButton?.addEventListener('click', function() {
-        saveState();
+        if (confirm('Are you sure you want to save the entire schedule?')) {
+            saveState();
+        }
     });
 
     resetButton?.addEventListener('click', function() {
@@ -62,7 +64,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    loadButton.addEventListener('click', loadState);
+    loadButton.addEventListener('click', function() {
+        // Ask for confirmation before loading the state
+        if (confirm('Are you sure you want to load the saved schedule? This will overwrite any unsaved changes.')) {
+            loadState();
+        }
+    });
+
     loadState(); // Simulate clicking the 'Load Schedule' button
 
     const addStudentButton = document.getElementById('add-student-button');
@@ -939,54 +947,60 @@ function updateLogPanel() {
 updateLogPanel();
 
 
-function removePerson(identifier) {
-    let personIndex;
+function removePerson(name) {
+    let found = false;
 
-    // Determine if 'identifier' is a number (index) or a string (name)
-    if (typeof identifier === 'number') {
-        personIndex = identifier;
-    } else if (typeof identifier === 'string') {
-        personIndex = people.findIndex(p => p.name === identifier);
+    // Ask for confirmation before removing the person
+    if (!confirm(`Are you sure you want to remove ${name} from all assigned shifts?`)) {
+        return; // Exit if the user does not confirm
     }
 
-    // Check if the person was found
-    if (personIndex === -1 || personIndex === undefined) {
-        alert('Person not found.');
-        return; // Exit if the person is not found
-    }
-
-    const person = people[personIndex];
-    if (!person) {
-        alert('Person not found.');
-        return;
-    }
-
-    if (confirm('Are you sure you want to remove this person?')) {
-        // Remove the person's assignments from each table
-        Object.keys(tableAssignments).forEach(tableId => {
-            tableAssignments[tableId] = tableAssignments[tableId].filter(assignment => {
-                const isAssignedToPerson = assignment.names.includes(person.name);
-                if (isAssignedToPerson) {
-                    // Remove the person's name from the assignment
-                    assignment.names = assignment.names.filter(name => name !== person.name);
-                }
-                return !isAssignedToPerson;
-            });
-        });
-
+    // Check if the person exists in the people array first
+    const personIndexInPeople = people.findIndex(p => p.name === name);
+    if (personIndexInPeople > -1) {
+        // Person found in people array, set found to true
+        found = true;
         // Remove the person from the people array
-        people.splice(personIndex, 1);
-
-        // Save changes to localStorage
+        people.splice(personIndexInPeople, 1);
+        // Save the updated state
         localStorage.setItem('people', JSON.stringify(people));
-        localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+    }
 
-        // Update the display
-        updateAllTables(); // Make sure this function updates the tables in the UI
-        updateLogPanel();
-        alert(`${person.name} has been removed.`);
+    // Iterate through all table assignments
+    for (const [tableId, assignments] of Object.entries(tableAssignments)) {
+        // Go through each assignment in the current table
+        assignments.forEach((assignment, assignmentIndex) => {
+            // Check if the person is part of the current assignment
+            if (assignment.names.includes(name)) {
+                found = true;
+                // Remove the person from this assignment
+                assignment.names = assignment.names.filter(n => n !== name);
+
+                // If the assignment has no more names, remove the assignment itself
+                if (assignment.names.length === 0) {
+                    assignments.splice(assignmentIndex, 1);
+                }
+
+                // Update the table if changes were made
+                updateTable(tableId);
+            }
+        });
+    }
+
+    // Save the updated table assignments
+    localStorage.setItem('tableAssignments', JSON.stringify(tableAssignments));
+
+    // Update the log panel
+    updateLogPanel();
+
+    if (found) {
+        alert(`${name} has been removed from their shifts.`);
+    } else {
+        alert(`${name} was not found in any shifts or in the people list.`);
     }
 }
+
+
 
 
 // Call updateLogPanel initially to set up the log panel
