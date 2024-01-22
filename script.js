@@ -551,32 +551,48 @@ function resetSchedule() {
 
 
 function updateTable(tableId) {
+    console.log(`Updating table: ${tableId}`);
     const table = document.getElementById(tableId);
+    if (!table) {
+        console.error(`Table with ID ${tableId} not found.`);
+        return;
+    }
+
     const assignments = tableAssignments[tableId];
+    console.log(`Assignments for ${tableId}:`, assignments);
 
     Array.from(table.querySelectorAll('td')).forEach(cell => {
         const timeslot = cell.dataset.timeslot;
         if (timeslot) {
-            // Find the assignment for this timeslot
             const assignment = assignments.find(a => a.timeslot === timeslot);
 
             if (assignment && assignment.names.length > 0) {
-                // Join the names for display if there are assigned people
                 cell.textContent = assignment.names.join(", ");
                 cell.classList.add('filled-timeslot');
+
+                // Set color based on hourType
+                if (assignment.hourType === 'groupTutoring') {
+                    cell.style.backgroundColor = 'red'; // Color for group tutorials
+                } else if (assignment.hourType === 'dropIn') {
+                    cell.style.backgroundColor = 'blue'; // Color for drop ins
+                }
+
                 cell.dataset.assigned = assignment.names.join(", ");
-            // Update the dataset for multiple assigned names
                 cell.dataset.assignedNames = JSON.stringify(assignment.names);
+                cell.dataset.hourType = assignment.hourType;
             } else {
-                // If no one is assigned, mark the cell as available
+                // Reset cell to default state
                 cell.textContent = 'Available';
                 cell.classList.remove('filled-timeslot');
+                cell.style.backgroundColor = ''; // Reset background color
                 delete cell.dataset.assigned;
                 delete cell.dataset.assignedNames;
+                delete cell.dataset.hourType;
             }
         }
     });
 }
+
 
 
 
