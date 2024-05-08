@@ -7,6 +7,8 @@ Link to the Website: https://jaewoongy.github.io/class-scheduler/
 
 **There are 2 options in which you can input your student data into the class scheduler:**
 
+
+
 **Option 1: Manually add student tutor to table** 
 (You can either add more student tutors, remove student tutors (Using the Red X) or keep the current list of students for this step.)
 
@@ -17,6 +19,8 @@ If you click on each cell corresponding to a Time and Day, you can see who you c
 I color coded for better organization (blue represents the tutor is doing a drop in, red represents the tutor is doing a group session).
 
 Once you add a student to a time/day slot, it should be reflected in their available time and # of drop in hours/group tutoring hours filled in the list as shown above for Melly. You can also remove Melly from her assigned times on the table. Also, note that you can add two students to a time slot, which is helpful for the drop-ins.
+
+
 
 **Option 2: Add student via paste from Excel from Google Forms:**
 
@@ -34,6 +38,8 @@ Once you press "Add Student", Melly should show up on the list of student tutors
 <img width="715" alt="Screenshot 2024-05-08 at 12 54 29 AM" src="https://github.com/jaewoongy/class-scheduler/assets/56903210/06442959-61c7-4644-b409-1f5055321df3">
 
 This is helpful since you can use these times to determine what times/days they can be available for without having to look at the google form of their times and # of assigned hours.
+
+
 
 
 Done! You should save whenever you can.
