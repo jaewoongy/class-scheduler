@@ -40,5 +40,3 @@ Once you add a student to a time/day slot, it should be reflected in their avail
 **Step 3:** Done! You should save whenever you can.
 
 When you press "Save Schedule" at the top of the site, it should save the changes that you have made in adding the tutor and assigning shifts to the table, even after pressing "Reset Schedule". You can then load the saved file by pressing "Load Schedule"
-
-**However, you should still update the Quarter Schedules with the assigned slots for each tutor just in case.**
