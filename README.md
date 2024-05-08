@@ -7,7 +7,7 @@ Link to the Website: https://jaewoongy.github.io/class-scheduler/
 
 **There are 2 options in which you can input your student data into the class scheduler:**
 
-**Option 1: Add student via paste from Excel from Google Forms: **
+**Option 1: Add student via paste from Excel from Google Forms:**
 There are two options to add a student tutor. It's quicker to add them using the first option, using the "paste unavailability days" box. I will show the image below for reference.
 
 Example:
