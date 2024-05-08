@@ -5,7 +5,7 @@ Link to the Website: https://jaewoongy.github.io/class-scheduler/
 
 **You can enlarge the size of the tables and fonts by zooming in (keyboard shortcut is: "CTRL" and "plus sign (+)")**
 
-**#Option 1:**
+**Option 1:**
 Add student via paste: 
 There are two options to add a student tutor. It's quicker to add them using the first option, using the "paste unavailability days" box. I will show the image below for reference.
 
@@ -26,7 +26,7 @@ This is helpful since you can use these times to determine what times/days they 
 
 
 
-**Step 2:** Add student tutor to table (You can either add more student tutors, remove student tutors (Using the Red X) or keep the current list of students for this step.)
+**Option 2:** Add student tutor to table (You can either add more student tutors, remove student tutors (Using the Red X) or keep the current list of students for this step.)
 
 If you click on each cell corresponding to a Time and Day, you can see who you can assign to that time slot based on their available times that you pasted in when adding students:
 
@@ -37,6 +37,6 @@ I color coded for better organization (blue represents the tutor is doing a drop
 Once you add a student to a time/day slot, it should be reflected in their available time and # of drop in hours/group tutoring hours filled in the list as shown above for Melly. You can also remove Melly from her assigned times on the table. Also, note that you can add two students to a time slot, which is helpful for the drop-ins.
 
 
-**Step 3:** Done! You should save whenever you can.
+Done! You should save whenever you can.
 
 When you press "Save Schedule" at the top of the site, it should save the changes that you have made in adding the tutor and assigning shifts to the table, even after pressing "Reset Schedule". You can then load the saved file by pressing "Load Schedule"
