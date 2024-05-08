@@ -5,7 +5,7 @@ Link to the Website: https://jaewoongy.github.io/class-scheduler/
 
 **You can enlarge the size of the tables and fonts by zooming in (keyboard shortcut is: "CTRL" and "plus sign (+)")**
 
-#**Option 1:**
+**#Option 1:**
 Add student via paste: 
 There are two options to add a student tutor. It's quicker to add them using the first option, using the "paste unavailability days" box. I will show the image below for reference.
 
