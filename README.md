@@ -32,7 +32,7 @@ First, in the Sheets, copy the highlighted times as shown.
 These times represent the days of the week they are unavailable to teach at that current time slot. (Melly is unavailable for 1PM on MON, WED):
 
 Input their name and group/drop in hours in the first 3 boxes, and paste the copied line from sheets in the big box. You must separate each hour by a new line **and type None for the blank excel cells at that corresponding time**, as shown:
-Screen Shot 2024-01-22 at 8.58.03 AM.png
+<img width="1209" alt="Screenshot 2024-05-08 at 1 00 01 AM" src="https://github.com/jaewoongy/class-scheduler/assets/56903210/4a56bc91-60a2-4085-801c-416a2d60de40">
 
 Once you press "Add Student", Melly should show up on the list of student tutors. The code will automatically recalculate the student's unavailable times to find all their available times. You can click on each student to see the times they are available as shown:
 <img width="715" alt="Screenshot 2024-05-08 at 12 54 29 AM" src="https://github.com/jaewoongy/class-scheduler/assets/56903210/06442959-61c7-4644-b409-1f5055321df3">
