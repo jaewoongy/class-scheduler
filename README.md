@@ -5,8 +5,9 @@ Link to the Website: https://jaewoongy.github.io/class-scheduler/
 
 **You can enlarge the size of the tables and fonts by zooming in (keyboard shortcut is: "CTRL" and "plus sign (+)")**
 
-**Option 1:**
-Add student via paste: 
+**There are 2 options in which you can input your student data into the class scheduler:**
+
+**Option 1: Add student via paste from Excel from Google Forms: **
 There are two options to add a student tutor. It's quicker to add them using the first option, using the "paste unavailability days" box. I will show the image below for reference.
 
 Example:
@@ -26,7 +27,8 @@ This is helpful since you can use these times to determine what times/days they 
 
 
 
-**Option 2:** Add student tutor to table (You can either add more student tutors, remove student tutors (Using the Red X) or keep the current list of students for this step.)
+**Option 2: Manually add student tutor to table** 
+(You can either add more student tutors, remove student tutors (Using the Red X) or keep the current list of students for this step.)
 
 If you click on each cell corresponding to a Time and Day, you can see who you can assign to that time slot based on their available times that you pasted in when adding students:
 
